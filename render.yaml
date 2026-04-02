@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: aoe4it-faceit-staging
+    runtime: python
+    plan: free
+    autoDeploy: false
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --preload --workers 2 --threads 4 --timeout 120
+    healthCheckPath: /readyz
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: PYTHON_VERSION
+        value: 3.13.9
+      - key: DATABASE_PATH
+        value: /tmp/aoe4it/aoe4it.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: RENDER
+        value: "true"
+      - key: SESSION_COOKIE_SAMESITE
+        value: Lax
+      - key: PERMANENT_SESSION_DAYS
+        value: "14"
+      - key: ENABLE_SHADOW_LAB
+        value: "false"
+      - key: APP_BASE_URL
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: INVITE_CODE
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_USE_TLS
+        sync: false
