@@ -1,0 +1,54 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Register | Aoe4IT{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="auth-hero-card">
+    <div class="auth-kicker">Competitive entry</div>
+    <h1>Create account</h1>
+    <p>Build your profile, enter the queue, and prepare for weekly cups with the full Aoe4IT flow behind you. Your account is saved immediately, and confirmation email delivery is supported when mail is configured.</p>
+    <div class="auth-hero-pills">
+      <span class="hero-pill">Profiles</span>
+      <span class="hero-pill">Queue</span>
+      <span class="hero-pill">Ladder</span>
+    </div>
+  </div>
+
+  <section class="auth-card-faceit">
+    <div class="auth-card-head">
+      <div>
+        <div class="auth-label">New account</div>
+        <h2>Register</h2>
+      </div>
+      <div class="auth-head-actions">
+        <a class="small-btn alt" href="{{ url_for('login') }}">Log in</a>
+        <a class="small-btn" href="{{ url_for('register_account') }}">Register</a>
+      </div>
+    </div>
+
+    <form method="post" class="auth-form-grid auth-form-grid-two">{{ csrf_input() }}
+      <label>
+        <span>Username</span>
+        <input name="username" required autocomplete="username">
+      </label>
+      <label>
+        <span>Email</span>
+        <input type="email" name="email" required autocomplete="email">
+      </label>
+      <label>
+        <span>Password</span>
+        <input type="password" name="password" required autocomplete="new-password">
+      </label>
+      <label>
+        <span>Confirm password</span>
+        <input type="password" name="confirm_password" required autocomplete="new-password">
+      </label>
+      <button class="cta-primary auth-submit auth-submit-wide" type="submit">Create account</button>
+    </form>
+
+    <div class="auth-footer-links">
+      <span>Already registered?</span>
+      <a href="{{ url_for('login') }}">Log in here</a>
+    </div>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}Aoe4IT Premium{% endblock %}
+{% block content %}
+<section class="simple-page premium-page premium-tier2">
+  <div class="simple-header premium-hero-header" style="background-image:linear-gradient(180deg, rgba(10,13,19,.28), rgba(10,13,19,.86)), url('{{ url_for('static', filename='art/header_market.webp') }}'); background-size:cover; background-position:center; border-radius:22px; border:1px solid rgba(255,255,255,.08);">
+    <div class="hero-kicker">Premium membership</div>
+    <h1>Aoe4IT Premium</h1>
+    <p>Priority matchmaking, deeper analytics, seasonal cosmetics, and event perks built for players who want the full competitive platform.</p>
+    <div class="premium-head-stats">
+      <div class="signal-card compact-signal"><span class="signal-label">Waitlist</span><strong>{{ waitlist_count }}</strong><div class="muted">players on the list</div></div>
+      <div class="signal-card compact-signal"><span class="signal-label">Queue edge</span><strong>Priority lane</strong><div class="muted">faster match and event entry</div></div>
+      <div class="signal-card compact-signal"><span class="signal-label">Season track</span><strong>Cosmetics</strong><div class="muted">badges, banners, and profile flair</div></div>
+    </div>
+  </div>
+
+  <section class="premium-showcase-grid">
+    <article class="card premium-preview-card glow-orange">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Launch preview</div>
+          <h3>Premium profile look</h3>
+        </div>
+        <span class="pill">Founders track</span>
+      </div>
+      <div class="premium-preview-shell">
+        <div class="premium-banner"></div>
+        <div class="premium-profile-row">
+          <div class="profile-avatar big">{{ (current_player.display_name if current_player else (current_user.username if current_user else 'P'))[0]|upper }}</div>
+          <div>
+            <strong>{{ current_player.display_name if current_player else (current_user.username if current_user else 'Premium Member') }}</strong>
+            <div class="muted">Animated border, elite crest, advanced stat panels</div>
+          </div>
+        </div>
+        <div class="premium-token-row">
+          <span class="rank-badge gold-badge">Founder Crest</span>
+          <span class="rank-badge">Priority Queue</span>
+          <span class="rank-badge blue-badge">Analytics Pack</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card premium-cta-card">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Launch track</div>
+          <h3>Secure premium access</h3>
+        </div>
+        <span class="pill">Wave 1</span>
+      </div>
+      <p class="muted top-gap">Early access will unlock first for players who want better match flow, stronger profile presence, and cleaner tournament support.</p>
+      <div class="premium-cta-points">
+        <div class="list-row"><div class="row-main"><strong>Priority matchmaking</strong><div class="muted">Stand closer to the front of event and ranked queue traffic.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Advanced scouting</strong><div class="muted">Civ trends, matchup prep, map comfort, and streak heatmaps.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Season cosmetics</strong><div class="muted">Premium profile banners, borders, and elite plate variants.</div></div></div>
+      </div>
+      <div class="premium-cta-actions top-gap">
+        {% if current_user %}
+          {% if has_waitlist %}
+          {{ empty_panel('Your premium spot is saved', 'You are already on the premium waitlist. The launch track is holding your place.', url_for('players'), 'Open players', url_for('tournaments'), 'Open tournaments', compact=True) }}
+          <div class="hero-actions top-gap">
+            <a class="cta-secondary" href="{{ url_for('players') }}">Open players</a>
+            <a class="cta-secondary" href="{{ url_for('tournaments') }}">Open tournaments</a>
+          </div>
+          {% else %}
+          <form method="post" action="{{ url_for('premium_waitlist') }}">{{ csrf_input() }}
+            <button class="cta-primary" type="submit">Join Premium Waitlist</button>
+          </form>
+          {% endif %}
+        {% else %}
+        {{ empty_panel('Account required', 'Create an account first, then join the premium waitlist and hold your launch position.', url_for('register_account'), 'Create account', url_for('login'), 'Log in', compact=True) }}
+        {% endif %}
+      </div>
+    </article>
+  </section>
+
+  <section class="premium-comparison-grid top-gap">
+    <article class="card premium-feature-board">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Membership comparison</div>
+          <h3>Free vs Premium</h3>
+        </div>
+        <span class="pill">Conversion view</span>
+      </div>
+      <div class="comparison-table top-gap">
+        <div class="comparison-head comparison-row">
+          <div>Feature</div>
+          <div>Free</div>
+          <div>Premium</div>
+        </div>
+        <div class="comparison-row"><div>Ranked queue</div><div>Standard</div><div>Priority lane</div></div>
+        <div class="comparison-row"><div>Player scouting</div><div>Basic search</div><div>Advanced matchup prep</div></div>
+        <div class="comparison-row"><div>Profile style</div><div>Base plate</div><div>Animated banners and borders</div></div>
+        <div class="comparison-row"><div>Tournament perks</div><div>Standard entry</div><div>Priority support and event flair</div></div>
+      </div>
+    </article>
+
+    <article class="card premium-roadmap-card">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Roadmap</div>
+          <h3>What unlocks first</h3>
+        </div>
+        <span class="pill">Wave plan</span>
+      </div>
+      <div class="premium-roadmap top-gap">
+        <div class="roadmap-step active">
+          <div class="roadmap-node">1</div>
+          <div><strong>Founders waitlist</strong><div class="muted">Reserve interest and track launch demand.</div></div>
+        </div>
+        <div class="roadmap-step active">
+          <div class="roadmap-node">2</div>
+          <div><strong>Queue and profile perks</strong><div class="muted">Priority matchmaking, premium identity, cleaner profile presentation.</div></div>
+        </div>
+        <div class="roadmap-step">
+          <div class="roadmap-node">3</div>
+          <div><strong>Scouting analytics</strong><div class="muted">Trends, civ prep, streak breakdowns, and event insight pages.</div></div>
+        </div>
+        <div class="roadmap-step">
+          <div class="roadmap-node">4</div>
+          <div><strong>Premium tournament access</strong><div class="muted">Elite events, launch cups, and special seasonal cosmetics.</div></div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <div class="premium-grid top-gap">
+    <article class="card premium-feature premium-spotlight"><h3>Priority Queue</h3><p>Faster competitive matchmaking and smoother event joining when lobbies get busy.</p></article>
+    <article class="card premium-feature premium-spotlight"><h3>Advanced Analytics</h3><p>Map pools, civ trends, matchup prep, streak heatmaps, and better scouting summaries.</p></article>
+    <article class="card premium-feature premium-spotlight"><h3>Premium Cosmetics</h3><p>Animated borders, profile banners, emblems, victory plates, and season-specific visual flair.</p></article>
+    <article class="card premium-feature premium-spotlight"><h3>Event Benefits</h3><p>Extra cups, priority support, founder badges, and premium progression across the season.</p></article>
+  </div>
+</section>
+{% endblock %}

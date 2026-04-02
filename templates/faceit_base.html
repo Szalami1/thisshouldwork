@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Aoe4IT{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='faceit.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="faceit-shell {% block body_class %}{% endblock %}">
+  <div class="app-shell">
+    <header class="topbar {% if current_user %}topbar-auth{% else %}topbar-guest{% endif %}">
+      <div class="brand-wrap">
+        <a class="brand" href="{{ url_for('dashboard') }}">AOE4<span>IT</span></a>
+      </div>
+
+      <div class="topbar-controls">
+        <form class="search-box" method="get" action="{{ url_for('search') }}">
+          <button class="search-submit" type="submit" aria-label="Search">⌕</button>
+          <input type="text" name="q" value="{{ request.args.get('q', '') if request.endpoint == 'search' else '' }}" placeholder="Search players, events, matches..." aria-label="Search" />
+        </form>
+
+        {% if current_user %}
+        <div class="topbar-account">
+          <div class="utility-links">
+            {% if admin_mode %}<a class="utility-link" href="{{ url_for('admin') }}">Admin</a>{% endif %}
+            <a class="utility-link" href="{{ url_for('settings') }}">Settings</a>
+          </div>
+
+          {% if current_player %}
+          <div class="stat-cluster">
+            <div class="top-stat"><span class="top-stat-label">Rating</span><strong>{{ current_player.rating }}</strong></div>
+            <div class="top-stat"><span class="top-stat-label">Civ</span><strong>{{ current_player.main_civ or 'Unpicked' }}</strong></div>
+          </div>
+          {% endif %}
+
+          <a class="profile-pill compact-profile" href="{{ url_for('player_detail', player_id=current_player.id) if current_player else url_for('players') }}">
+            <div class="profile-avatar">{{ (current_player.display_name or current_user.username)[0]|upper }}</div>
+            <div class="profile-copy">
+              <div class="profile-name">{{ current_player.display_name if current_player else current_user.username }}</div>
+              <div class="profile-level">View profile</div>
+            </div>
+          </a>
+
+          <form method="post" action="{{ url_for('logout') }}" class="logout-inline">{{ csrf_input() }}
+            <button class="small-btn alt topbar-action" type="submit">Log out</button>
+          </form>
+        </div>
+        {% else %}
+        <div class="guest-actions">
+          <a class="small-btn alt topbar-action" href="{{ url_for('login') }}">Log in</a>
+          <a class="small-btn topbar-action" href="{{ url_for('register_account') }}">Register</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <nav class="nav" id="mainNav">
+        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Home</a>
+        <a class="nav-link {% if request.endpoint in ['play','practice_room_detail','hidden_draft_lab','hidden_draft_room'] %}active{% endif %}" href="{{ url_for('play') }}">Play</a>
+        <a class="nav-link {% if request.endpoint in ['tournaments','tournament_detail','match_detail'] %}active{% endif %}" href="{{ url_for('tournaments') }}">Tournaments</a>
+        <a class="nav-link {% if request.endpoint == 'ladder' %}active{% endif %}" href="{{ url_for('ladder') }}">Ladders</a>
+        <a class="nav-link {% if request.endpoint in ['players','player_detail'] %}active{% endif %}" href="{{ url_for('players') }}">Players</a>
+        <a class="nav-link {% if request.endpoint == 'news' %}active{% endif %}" href="{{ url_for('news') }}">News</a>
+        <a class="nav-link premium-link {% if request.endpoint == 'premium' %}active{% endif %}" href="{{ url_for('premium') }}">Premium</a>
+      </nav>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="flash-pill {{ 'flash-error' if category == 'error' else 'flash-success' }}" data-flash-pill>{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <main class="faceit-main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script>
+  (() => {
+
+    const topbar = document.querySelector('.topbar');
+    const syncTopbarHeight = () => {
+      if (!topbar) return;
+      document.documentElement.style.setProperty('--topbar-height', `${topbar.offsetHeight + 16}px`);
+    };
+    syncTopbarHeight();
+    window.addEventListener('resize', syncTopbarHeight);
+
+    const flashPills = document.querySelectorAll('[data-flash-pill]');
+    flashPills.forEach((pill, index) => {
+      const delay = pill.classList.contains('flash-error') ? 5200 : 3000;
+      window.setTimeout(() => {
+        pill.classList.add('is-dismissing');
+        window.setTimeout(() => pill.remove(), 260);
+      }, delay + (index * 120));
+    });
+
+    const formatRemaining = (targetMs) => {
+      const diff = Math.max(0, targetMs - Date.now());
+      const totalSeconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${String(seconds).padStart(2, '0')}`;
+    };
+    const countdownNodes = document.querySelectorAll('[data-countdown-target]');
+    const tick = () => {
+      countdownNodes.forEach((node) => {
+        const target = Date.parse(node.dataset.countdownTarget || '');
+        if (!Number.isFinite(target)) return;
+        const ended = target <= Date.now();
+        node.textContent = ended ? '0:00' : formatRemaining(target);
+        node.classList.toggle('is-critical', target - Date.now() < 30000);
+      });
+      document.querySelectorAll('[data-countdown-bar]').forEach((bar) => {
+        const start = Date.parse(bar.dataset.startedAt || '');
+        const target = Date.parse(bar.dataset.countdownBar || '');
+        if (!Number.isFinite(start) || !Number.isFinite(target) || target <= start) return;
+        const ratio = Math.min(1, Math.max(0, (Date.now() - start) / (target - start)));
+        bar.style.setProperty('--countdown-fill', `${ratio * 100}%`);
+        bar.classList.toggle('is-critical', ratio > 0.75);
+      });
+    };
+    if (countdownNodes.length || document.querySelector('[data-countdown-bar]')) {
+      tick();
+      window.setInterval(tick, 1000);
+    }
+
+    const roomWatcher = document.querySelector('[data-room-watch-url]');
+    if (roomWatcher) {
+      const currentState = () => ({
+        updated_at: roomWatcher.dataset.roomUpdatedAt || '',
+        status: roomWatcher.dataset.roomStatus || '',
+        map_actions: roomWatcher.dataset.roomMapActions || '',
+        civ_actions: roomWatcher.dataset.roomCivActions || ''
+      });
+      let state = currentState();
+      window.setInterval(async () => {
+        try {
+          const res = await fetch(roomWatcher.dataset.roomWatchUrl, {headers: {'X-Requested-With': 'fetch'}});
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data || !data.ok) return;
+          const sync = document.querySelector('.room-data-sync');
+          const changed = String(data.updated_at||'') !== state.updated_at || String(data.status||'') !== state.status || String(data.map_actions||'') !== state.map_actions || String(data.civ_actions||'') !== state.civ_actions || String(data.chosen_map||'') !== String(sync?.dataset.roomChosenMap || '') || String(data.player1_final_civ||'') !== String(sync?.dataset.roomP1Civ || '') || String(data.player2_final_civ||'') !== String(sync?.dataset.roomP2Civ || '');
+          if (changed) window.location.reload();
+        } catch (e) {}
+      }, 4000);
+    }
+
+    document.querySelectorAll('[data-draft-splash]').forEach((node) => {
+      const key = node.dataset.splashKey;
+      if (!key) return;
+      if (window.localStorage.getItem(key)) { node.remove(); return; }
+      window.localStorage.setItem(key, '1');
+      setTimeout(() => node.classList.add('is-visible'), 80);
+      setTimeout(() => node.classList.remove('is-visible'), 2200);
+      setTimeout(() => node.remove(), 2800);
+    });
+  })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

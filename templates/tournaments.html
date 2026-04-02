@@ -1,0 +1,197 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}Aoe4IT Weekly{% endblock %}
+{% block content %}
+<section class="hero hero-weekly compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/header_market.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Events hub</div>
+    <h1>Weekly</h1>
+    <p>Run weekly cups, register for events, and keep the competitive cycle moving every week.</p>
+  </div>
+</section>
+
+<section class="tab-strip slim">
+  <a class="subtab {% if active_tab == 'tournaments' %}active{% endif %}" href="{{ url_for('tournaments', tab='tournaments', q=search, status=status_filter) }}">Tournaments</a>
+  <a class="subtab {% if active_tab == 'teams' %}active{% endif %}" href="{{ url_for('tournaments', tab='teams', q=search, status=status_filter) }}">Pro Teams</a>
+  <a class="subtab {% if active_tab == 'streamers' %}active{% endif %}" href="{{ url_for('tournaments', tab='streamers', q=search, status=status_filter) }}">Streamers</a>
+</section>
+
+{% if active_tab == 'tournaments' %}
+<section class="featured-weekly-grid top-gap-sm">
+  <article class="card featured-weekly-card span-2 surface-card--accent">
+    <div class="section-head tight-head">
+      <div>
+        <div class="hero-kicker">Featured event</div>
+        <h3>{% if featured %}{{ featured.name }}{% else %}Weekly cup spotlight{% endif %}</h3>
+      </div>
+      <span class="pill">{% if featured %}{{ featured.status|title }}{% else %}Standby{% endif %}</span>
+    </div>
+    <div class="featured-weekly-layout">
+      <div class="featured-weekly-art" style="background-image:url('{{ url_for('static', filename='art/bg_insider_signup.webp') }}'); background-size:cover; background-position:center;"></div>
+      <div class="featured-weekly-copy">
+        <p>{% if featured %}The current event is already visible in the hub with registration count, tournament detail page, and bracket support. This block gives the page a proper flagship card instead of leaving the whole center empty.{% else %}The weekly system is ready. As soon as the next cup opens, this panel flips into registration mode with start time, player count, and bracket status.{% endif %}</p>
+        <div class="feature-stat-row">
+          <div class="feature-stat"><span>Status</span><strong>{% if featured %}{{ featured.status|title }}{% else %}Open soon{% endif %}</strong></div>
+          <div class="feature-stat"><span>Registered</span><strong>{% if featured %}{{ featured.reg_count or 0 }}{% else %}0{% endif %}</strong></div>
+          <div class="feature-stat"><span>Format</span><strong>1v1</strong></div>
+          <div class="feature-stat"><span>Cycle</span><strong>Weekly</strong></div>
+        </div>
+        <div class="hero-actions left-actions top-gap-sm">
+          {% if featured %}
+          <a class="small-btn" href="{{ url_for('tournament_detail', tournament_id=featured.id) }}">Open featured event</a>
+          {% elif admin_mode %}
+          <a class="small-btn" href="#create-cup">Prepare next cup</a>
+          {% else %}
+          <a class="small-btn" href="{{ url_for('play') }}">Open play</a>
+          {% endif %}
+          <a class="small-btn alt" href="{{ url_for('ladder') }}">Open rewards</a>
+        </div>
+      </div>
+    </div>
+  </article>
+  <article class="card event-status-card surface-card--sidebar">
+    <div class="card-title">Weekly Status</div>
+    <div class="stack-list compact-gap">
+      <div class="list-row compact-list-row"><div class="row-main"><strong>Open cups</strong><div class="muted">Ready for players to register</div></div><div class="row-side"><span class="pill">{{ summary.open }}</span></div></div>
+      <div class="list-row compact-list-row"><div class="row-main"><strong>Live cups</strong><div class="muted">Brackets currently running</div></div><div class="row-side"><span class="pill">{{ summary.live }}</span></div></div>
+      <div class="list-row compact-list-row"><div class="row-main"><strong>Completed</strong><div class="muted">Archived event history</div></div><div class="row-side"><span class="pill">{{ summary.completed }}</span></div></div>
+      <div class="list-row compact-list-row"><div class="row-main"><strong>Total registrations</strong><div class="muted">Stored event signups</div></div><div class="row-side"><span class="pill">{{ summary.registrations }}</span></div></div>
+    </div>
+  </article>
+</section>
+{% endif %}
+
+<section class="weekly-layout top-gap-md">
+  <div>
+    <form class="filter-row" method="get" action="{{ url_for('tournaments') }}" style="margin-bottom:16px;">
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+      <input type="text" name="q" placeholder="Search tournaments or winners..." value="{{ search }}">
+      <select name="status">
+        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Status: All</option>
+        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+        <option value="live" {% if status_filter == 'live' %}selected{% endif %}>Live</option>
+        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+      </select>
+      <button class="small-btn alt" type="submit">Apply Filter</button>
+    </form>
+
+    {% if active_tab == 'tournaments' %}
+    <div class="tournament-grid rich-tournament-grid">
+      {% for tournament in tournaments %}
+      <article class="card tournament-panel event-dense-card surface-card--soft">
+        <div class="tournament-hero" style="background-image:url('{{ url_for('static', filename='art/del_splash_mobile.webp') }}'); background-size:cover; background-position:center;"></div>
+        <div class="event-card-top">
+          <h3>{{ tournament.name }}</h3>
+          <span class="event-status event-status-{{ tournament.status }}">{{ tournament.status|title }}</span>
+        </div>
+        <p class="muted">{{ tournament.starts_at or 'Start time to be announced' }}</p>
+        <div class="event-meta-grid">
+          <div class="event-meta"><span>Mode</span><strong>1v1</strong></div>
+          <div class="event-meta"><span>Format</span><strong>{{ tournament.format_desc or 'Weekly format' }}</strong></div>
+          <div class="event-meta"><span>Players</span><strong>{{ tournament.reg_count or 0 }}</strong></div>
+          <div class="event-meta"><span>Winner</span><strong>{{ tournament.winner_name or 'Open field' }}</strong></div>
+        </div>
+        <div class="event-footnote">Perfect for weekly visibility, bracket play, and streamed finals.</div>
+        <a class="full-btn btn-link" href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}">Open Tournament</a>
+      </article>
+      {% else %}
+      <article class="card tournament-panel wide empty-rich-card surface-card--soft">
+        <div class="section-head tight-head">
+          <div><div class="hero-kicker">No cup in this filter</div><h3>The weekly hub is ready for the first event</h3></div>
+        </div>
+        <p class="muted">Create a cup and this area fills with event cards, registration numbers, and direct routes into the bracket page. Until then, the page still explains the event rhythm instead of collapsing into one empty box.</p>
+        <div class="story-grid-two top-gap-sm">
+          <div class="story-bloc mini-story"><strong>Step 1</strong><span class="muted">Admin creates a cup and sets a start time.</span></div>
+          <div class="story-bloc mini-story"><strong>Step 2</strong><span class="muted">Players register and the bracket becomes visible.</span></div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    <div class="story-grid-two top-gap-md">
+      <article class="card simple-panel surface-card--soft">
+        <div class="section-head tight-head">
+          <div><div class="hero-kicker">Event format</div><h3>How the weekly cup runs</h3></div>
+        </div>
+        <div class="stack-list compact-gap">
+          <div class="list-row compact-list-row"><div class="row-main"><strong>Open registration</strong><div class="muted">Players join directly from the tournament page.</div></div></div>
+          <div class="list-row compact-list-row"><div class="row-main"><strong>Bracket generation</strong><div class="muted">Admins can seed and push the tournament into live rounds.</div></div></div>
+          <div class="list-row compact-list-row"><div class="row-main"><strong>Result reporting</strong><div class="muted">Match detail pages capture scores and move players forward.</div></div></div>
+        </div>
+      </article>
+      <article class="card weekly-missions surface-card--sidebar">
+        <div class="card-title">Weekly Challenges</div>
+        <div class="mission-row"><div class="mission-dot"></div><span>Win 3 Matches</span><strong>+350</strong></div>
+        <div class="mission-row"><div class="mission-dot"></div><span>Train 300 Units</span><strong>+600</strong></div>
+        <div class="mission-row"><div class="mission-dot"></div><span>Win a BO3 Practice Match</span><strong>+55</strong></div>
+        <a class="small-btn alt" href="{{ url_for('ladder', mode='season', view='rewards') }}">Open rewards</a>
+      </article>
+    </div>
+
+    {% if admin_mode %}
+    <article class="card weekly-missions wide top-gap-md" id="create-cup">
+      <div class="card-title">Create Weekly Cup</div>
+      <form method="post" class="profile-form-grid">{{ csrf_input() }}
+        <input name="name" type="text" placeholder="Cup name">
+        <input name="starts_at" type="text" placeholder="YYYY-MM-DD HH:MM">
+        <button class="small-btn" type="submit">Create Cup</button>
+      </form>
+    </article>
+    {% endif %}
+    {% elif active_tab == 'teams' %}
+    <div class="tournament-grid">
+      {% for team in featured_teams %}
+      <article class="card tournament-panel">
+        <div class="card-title">{{ team.name }}</div>
+        <p class="muted">Average rating {{ team.avg_rating }}</p>
+        <div class="stack-list compact-gap">
+          {% for member in team.players %}
+          <div class="list-row compact-list-row">
+            <div class="row-main">
+              <strong>{{ member.display_name }}</strong>
+              <div class="muted">{{ member.main_civ or 'Open pool' }}</div>
+            </div>
+            <div class="row-side"><span class="pill">{{ member.rating }}</span></div>
+          </div>
+          {% endfor %}
+        </div>
+        <a class="small-btn alt" href="{{ url_for('player_detail', player_id=team.players[0].id) }}">Open captain profile</a>
+      </article>
+      {% else %}
+      <article class="card tournament-panel wide"><div class="card-title">Pro Teams</div><p class="muted">Create player profiles to populate the warband showcase.</p></article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="streamer-grid streamer-grid-wide">
+      {% for player in streamer_rows %}
+      <a class="streamer card-link" href="{{ url_for('player_detail', player_id=player.id) }}">
+        <div class="portrait-square" style="background-image:url('{{ url_for('static', filename='art/default_avatar.svg') }}'); background-size:cover; background-position:center;"></div>
+        <h4>{{ player.display_name }}</h4>
+        <div class="muted">{{ player.main_civ or 'Open civ' }}</div>
+      </a>
+      {% else %}
+      {{ empty_panel('No streamers to feature yet', 'As soon as player profiles and creator pages expand, this view becomes the weekly broadcast shelf.', url_for('players', tab='streamers'), 'Open players', url_for('news'), 'Open news', compact=True) }}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <aside class="sidebar-stack">
+    <article class="card side-highlight surface-card--sidebar">
+      <div class="card-title">Cup Snapshot</div>
+      <div class="leader-row compact-row"><span>Open</span><strong>{{ summary.open }}</strong></div>
+      <div class="leader-row compact-row"><span>Live</span><strong>{{ summary.live }}</strong></div>
+      <div class="leader-row compact-row"><span>Completed</span><strong>{{ summary.completed }}</strong></div>
+      <div class="leader-row compact-row"><span>Registrations</span><strong>{{ summary.registrations }}</strong></div>
+    </article>
+    <article class="card side-highlight surface-card--sidebar">
+      <div class="card-title">Latest News</div>
+      <div class="news-item"><strong>Spring update</strong><span class="muted">New ranked season begins</span></div>
+      <div class="news-item"><strong>Weekly cup live</strong><span class="muted">Draft rules and reporting are active</span></div>
+      <div class="news-item"><strong>Finals showcase</strong><span class="muted">The event hub is now designed to surface featured matches and signups.</span></div>
+      {% if featured %}<div class="top-gap"><a class="small-btn alt" href="{{ url_for('tournament_detail', tournament_id=featured.id) }}">Open featured event</a></div>{% endif %}
+    </article>
+  </aside>
+</section>
+{% endblock %}

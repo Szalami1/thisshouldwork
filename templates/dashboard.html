@@ -1,0 +1,205 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}Aoe4IT Home{% endblock %}
+{% block content %}
+<section class="hero hero-home hero-with-art" style="background-image:url('{{ url_for('static', filename='art/homepage_final_v20.png') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center">
+    <div class="hero-kicker">Competitive platform for</div>
+    <h1>Age of Empires IV</h1>
+    <p>Queue up, climb the ladder, join weekly cups, and bring your matches into the full map draft, civ ban, civ pick, and snipe flow.</p>
+    <div class="hero-actions">
+      {% if current_player and active_room %}
+      <a class="cta-primary" href="{{ url_for('practice_room_detail', room_id=active_room.id) }}">Open Room</a>
+      {% elif current_user %}
+      <form method="post" action="{{ url_for('join_queue') }}">{{ csrf_input() }}
+        <input type="hidden" name="queue_type" value="bo1">
+        <button class="cta-primary" type="submit">Find Match</button>
+      </form>
+      {% else %}
+      <a class="cta-primary" href="{{ url_for('register_account') }}">Find Match</a>
+      {% endif %}
+      <a class="cta-secondary" href="{{ url_for('tournaments') }}">Open Weekly</a>
+    </div>
+  </div>
+</section>
+
+<section class="insight-strip">
+  <article class="insight-card">
+    <span class="insight-label">Player base</span>
+    <strong>{{ player_count }}</strong>
+    <div class="muted">Visible competitors ready for ladder and cups.</div>
+  </article>
+  <article class="insight-card">
+    <span class="insight-label">Queue pressure</span>
+    <strong>{{ queue_snapshot.bo1 + queue_snapshot.bo3 }}</strong>
+    <div class="muted">Players currently sitting in live queue modes.</div>
+  </article>
+  <article class="insight-card">
+    <span class="insight-label">Weekly cycle</span>
+    <strong>{{ tournaments|length }}</strong>
+    <div class="muted">Open or featured cups visible on the platform right now.</div>
+  </article>
+  <article class="insight-card">
+    <span class="insight-label">Match room flow</span>
+    <strong>Draft ready</strong>
+    <div class="muted">Map veto, civ flow, scoring, and report tools are active.</div>
+  </article>
+</section>
+
+<section class="content-grid home-grid">
+  <article class="card quick-card glow-orange surface-card--accent">
+    <div class="card-title">Quick Match</div>
+    <div class="big-mode">Solo, 1v1</div>
+    <div class="muted">Players registered: <strong>{{ player_count }}</strong></div>
+    <div class="muted">Queue live: <strong>{{ queue_snapshot.bo1 }}</strong></div>
+    <div class="mini-portrait-row" style="background-image:url('{{ url_for('static', filename='art/age4_landinghero.webp') }}'); background-size:cover; background-position:center;"></div>
+    <div class="muted">{{ bo1_eta }}</div>
+    {% if current_player and queue_row and queue_row.queue_type == 'bo1' %}
+    <form method="post" action="{{ url_for('leave_queue') }}">{{ csrf_input() }}<button class="full-btn alt-fill" type="submit">Leave Queue</button></form>
+    {% elif current_user %}
+    <form method="post" action="{{ url_for('join_queue') }}">{{ csrf_input() }}<input type="hidden" name="queue_type" value="bo1"><button class="full-btn" type="submit">Queue Now</button></form>
+    {% else %}
+    <a class="full-btn btn-link" href="{{ url_for('register_account') }}">Queue Now</a>
+    {% endif %}
+  </article>
+
+  <article class="card tournament-card surface-card--soft">
+    <div class="card-title">Tournaments</div>
+    {% if next_cup %}
+    <h3>{{ next_cup.name }}</h3>
+    <p class="muted">Starts: {{ next_cup.starts_at }}</p>
+    {% else %}
+    <h3>Weekly 1v1 Cup</h3>
+    <p class="muted">The next weekly cup posts here with registration, player count, and bracket access the moment it opens.</p>
+    {% endif %}
+    <div class="card-banner gold-banner" style="background-image:url('{{ url_for('static', filename='art/del_splash_4k.webp') }}'); background-size:cover; background-position:center;"></div>
+    <a class="small-btn" href="{{ url_for('tournaments') }}">View Details</a>
+  </article>
+
+  <article class="card leaderboard-card surface-card--soft surface-card--dense">
+    <div class="card-title">Leaderboard</div>
+    {% if leaderboard_preview %}
+      {% for row in leaderboard_preview %}
+      <div class="leader-row compact-row">
+        <div class="live-left"><div class="avatar-sm" style="background-image:url('{{ url_for('static', filename='flags/' ~ civ_flags[row.main_civ]) if row.main_civ and civ_flags.get(row.main_civ) else url_for('static', filename='art/default_avatar.svg') }}')"></div><strong>{{ row.display_name }}</strong></div>
+        <div><strong>{{ row.rating }}</strong></div>
+      </div>
+      {% endfor %}
+    {% else %}
+      {{ empty_panel('No leaderboard yet', 'Create a player profile and finish the first set to light up the opening ladder board.', url_for('players'), 'Open players', url_for('register_account') if not current_user else url_for('play'), 'Start now', compact=True) }}
+    {% endif %}
+    <a class="small-btn alt align-end" href="{{ url_for('ladder') }}">View Ladder</a>
+  </article>
+
+  <article class="card news-card surface-card--soft surface-card--dense">
+    <div class="card-title">Latest News</div>
+    <ul class="bullet-list">
+      <li>Spring season recap</li>
+      <li>Patch queue tuning update</li>
+      <li>New strategy guides available</li>
+    </ul>
+    <a class="small-btn" href="{{ url_for('news') }}">Read More</a>
+  </article>
+</section>
+
+<section class="home-feature-grid top-gap-lg">
+  <article class="card featured-arena span-2">
+    <div class="section-head tight-head">
+      <div>
+        <div class="hero-kicker">Competitive pulse</div>
+        <h3>Live matches and recent finishes</h3>
+      </div>
+      <a class="small-btn alt" href="{{ url_for('play') }}">Open Play</a>
+    </div>
+    {% if recent %}
+    <div class="featured-match-list">
+      {% for row in recent[:4] %}
+      <div class="featured-match-card">
+        <div class="featured-match-top">
+          <span class="match-chip">{{ row.context_name }}</span>
+          <span class="muted">{{ row.best_of|upper }}</span>
+        </div>
+        <h4>{{ row.player1_name }} <span>vs</span> {{ row.player2_name }}</h4>
+        <div class="featured-score">{{ row.score1 }} : {{ row.score2 }}</div>
+        <div class="muted">{% if row.chosen_map %}{{ row.chosen_map }}{% else %}Tournament stage result{% endif %}</div>
+        <a class="small-btn alt" href="{{ url_for('practice_room_detail', room_id=row.source_id) if row.source_type == 'practice' else url_for('match_detail', match_id=row.source_id) }}">Open Result</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state rich-empty-state">
+      <strong>No finished sets yet.</strong>
+      <p>The match hub will fill with scorecards, map picks, and room history as soon as the first games are reported.</p>
+      <div class="empty-actions">
+        <a class="small-btn" href="{{ url_for('play') }}">Enter queue</a>
+        <a class="small-btn alt" href="{{ url_for('players') }}">Browse players</a>
+      </div>
+    </div>
+    {% endif %}
+  </article>
+
+  <article class="card home-sidebar-stack">
+    <div class="card-title">Platform Stats</div>
+    <div class="stack-list compact-gap">
+      <div class="list-row compact-list-row">
+        <div class="row-main"><strong>BO1 queue</strong><div class="muted">Instant 1v1 entry point</div></div>
+        <div class="row-side"><span class="pill">{{ queue_snapshot.bo1 }}</span></div>
+      </div>
+      <div class="list-row compact-list-row">
+        <div class="row-main"><strong>BO3 queue</strong><div class="muted">Long set practice flow</div></div>
+        <div class="row-side"><span class="pill">{{ queue_snapshot.bo3 }}</span></div>
+      </div>
+      <div class="list-row compact-list-row">
+        <div class="row-main"><strong>Weekly cups</strong><div class="muted">Upcoming or live event slots</div></div>
+        <div class="row-side"><span class="pill">{{ tournaments|length }}</span></div>
+      </div>
+      <div class="list-row compact-list-row">
+        <div class="row-main"><strong>Visible players</strong><div class="muted">Profiles ready for scouting</div></div>
+        <div class="row-side"><span class="pill">{{ player_count }}</span></div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="home-showcase-grid top-gap-lg">
+  <article class="card home-story-panel span-2">
+    <div class="section-head tight-head">
+      <div>
+        <div class="hero-kicker">Featured weekly flow</div>
+        <h3>How the platform stays active even before the first cup starts</h3>
+      </div>
+      <a class="small-btn alt" href="{{ url_for('tournaments') }}">Open weekly hub</a>
+    </div>
+    <div class="story-grid-two">
+      <div class="story-bloc highlight-story">
+        <span class="story-tag">Weekly cycle</span>
+        <h4>{% if next_cup %}{{ next_cup.name }}{% else %}Weekly cup rotation{% endif %}</h4>
+        <p>{% if next_cup %}The current featured cup already has its detail page, registration flow, and bracket tools ready. Players can register, admins can seed, and match reporting flows into the full tournament page.{% else %}As soon as the next cup opens, this section flips into the live event spotlight with registration status, start time, and bracket progress.{% endif %}</p>
+      </div>
+      <div class="story-list-stack">
+        <div class="story-bloc mini-story"><strong>Queue into draft rooms</strong><span class="muted">Find a match, accept ready check, then move into full draft and reporting flow.</span></div>
+        <div class="story-bloc mini-story"><strong>Track ladder movement</strong><span class="muted">Player pages, ladder standings, and match results all connect once sets are completed.</span></div>
+        <div class="story-bloc mini-story"><strong>Weekly cycle</strong><span class="muted">This section tracks the live cup, event timing, and the next place to queue into the weekly flow.</span></div>
+      </div>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="card-title">Top Players</div>
+    <div class="stack-list compact-gap">
+      {% for row in leaderboard_preview[:4] %}
+      <a class="list-row compact-list-row card-link" href="{{ url_for('player_detail', player_id=row.id) }}">
+        <div class="row-main">
+          <strong>{{ loop.index }}. {{ row.display_name }}</strong>
+          <div class="muted">{{ row.main_civ or 'Open civ pool' }}</div>
+        </div>
+        <div class="row-side"><span class="pill">{{ row.rating }}</span></div>
+      </a>
+      {% else %}
+      {{ empty_panel('Player showcase is waiting', 'As soon as visible profiles exist, this slot becomes the fast access strip for the strongest competitors.', url_for('players'), 'Browse players', url_for('register_account') if not current_user else url_for('players'), 'Create profile', compact=True) }}
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}

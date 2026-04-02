@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Aoe4IT{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="site-shell">
+    <aside class="sidebar">
+      <a class="brand-link" href="{{ url_for('dashboard') }}">
+        <div class="brand-mark">A4</div>
+        <div>
+          <div class="eyebrow">Competitive AoE4 1v1</div>
+          <div class="brand-title">Aoe4IT</div>
+        </div>
+      </a>
+
+      <nav class="nav-stack">
+        <a class="nav-link {% if request.endpoint in ['dashboard','play','practice_room_detail'] %}active{% endif %}" href="{{ url_for('dashboard') }}">Play</a>
+        <a class="nav-link {% if request.endpoint in ['tournaments','tournament_detail','match_detail'] %}active{% endif %}" href="{{ url_for('tournaments') }}">Weekly Cup</a>
+        <a class="nav-link {% if request.endpoint == 'ladder' %}active{% endif %}" href="{{ url_for('ladder') }}">Ladder</a>
+        <a class="nav-link {% if request.endpoint in ['players','player_detail'] %}active{% endif %}" href="{{ url_for('players') }}">Players</a>
+        {% if admin_mode %}
+        <a class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}" href="{{ url_for('admin') }}">Admin</a>
+        {% endif %}
+        {% if current_user %}
+        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">Settings</a>
+        {% endif %}
+      </nav>
+
+      <section class="sidebar-card">
+        {% if current_user %}
+          <div class="sidebar-label">Signed in</div>
+          <div class="identity-name">{{ current_user.username }}</div>
+          <div class="muted">{{ current_user.email }}</div>
+          {% if current_player %}
+            <div class="spacer-12"></div>
+            <div class="sidebar-label">Active player</div>
+            <div class="identity-name">{{ current_player.display_name }}</div>
+            <div class="muted">{{ current_player.main_civ or 'No main civ' }}, {{ current_player.rating }} rating</div>
+            <div class="pill-row left-pills top-gap">
+              <span class="pill">Trust {{ current_player.trust_score }}</span>
+              {% if current_player.country %}<span class="pill">{{ current_player.country }}</span>{% endif %}
+            </div>
+          {% else %}
+            <div class="spacer-12"></div>
+            <a class="btn btn-primary btn-block" href="{{ url_for('players') }}">Create player</a>
+          {% endif %}
+        {% else %}
+          <div class="sidebar-label">Welcome</div>
+          <div class="identity-name">Practice first</div>
+          <div class="muted">Register, create your player, queue up, then jump into weekly cups.</div>
+          <div class="spacer-12"></div>
+          <div class="stack-gap">
+            <a class="btn btn-primary btn-block" href="{{ url_for('register_account') }}">Create account</a>
+            <a class="btn btn-secondary btn-block" href="{{ url_for('login') }}">Log in</a>
+          </div>
+        {% endif %}
+      </section>
+
+      <div class="sidebar-foot muted">
+        Queue first, weekly cup second, clean esports product direction.
+      </div>
+    </aside>
+
+    <main class="main-shell">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">AoE4 flavored, FACEIT style structure</div>
+          <h1 class="page-title">{% block page_title %}Aoe4IT{% endblock %}</h1>
+        </div>
+        <div class="topbar-actions">
+          {% if current_user and current_player %}
+            <a class="btn btn-ghost" href="{{ url_for('player_detail', player_id=current_player.id) }}">My profile</a>
+          {% endif %}
+          {% if current_user %}
+            <form method="post" action="{{ url_for('logout') }}">{{ csrf_input() }}
+              <button class="btn btn-secondary" type="submit">Log out</button>
+            </form>
+          {% else %}
+            <a class="btn btn-secondary" href="{{ url_for('login') }}">Log in</a>
+            <a class="btn btn-primary" href="{{ url_for('register_account') }}">Register</a>
+          {% endif %}
+        </div>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <div class="content-shell">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const formatRemaining = (targetMs) => {
+        const diff = Math.max(0, targetMs - Date.now());
+        const totalSeconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${String(seconds).padStart(2, '0')}`;
+      };
+
+      const countdownNodes = document.querySelectorAll('[data-countdown-target]');
+      const tick = () => {
+        countdownNodes.forEach((node) => {
+          const target = Date.parse(node.dataset.countdownTarget || '');
+          if (!Number.isFinite(target)) return;
+          const ended = target <= Date.now();
+          node.textContent = ended ? '0:00' : formatRemaining(target);
+          node.classList.toggle('is-critical', target - Date.now() < 30000);
+        });
+
+        document.querySelectorAll('[data-countdown-bar]').forEach((bar) => {
+          const start = Date.parse(bar.dataset.startedAt || '');
+          const target = Date.parse(bar.dataset.countdownBar || '');
+          if (!Number.isFinite(start) || !Number.isFinite(target) || target <= start) return;
+          const ratio = Math.min(1, Math.max(0, (Date.now() - start) / (target - start)));
+          bar.style.setProperty('--countdown-fill', `${ratio * 100}%`);
+          bar.classList.toggle('is-critical', ratio > 0.75);
+        });
+      };
+
+      if (countdownNodes.length || document.querySelector('[data-countdown-bar]')) {
+        tick();
+        window.setInterval(tick, 1000);
+      }
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,111 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Match {{ match.id }} | Aoe4IT{% endblock %}
+{% block content %}
+<section class="hero hero-weekly compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/bg_insider_signup.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Bracket match</div>
+    <h1>{{ match.player1_name or 'TBD' }} vs {{ match.player2_name or 'TBD' }}</h1>
+    <p>{{ match.tournament_name or 'Aoe4IT Event' }} · Round {{ match.round_number }}/{{ round_total }} · BO{{ match.best_of }}</p>
+    <div class="hero-actions">
+      <span class="pill pill-status pill-{{ match.status|replace('_','-') }}">{{ match.status|replace('_',' ') }}</span>
+      {% if match.winner_id %}<span class="pill pill-accent">Winner locked</span>{% elif match.provisional_winner_id %}<span class="pill">Provisional result</span>{% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="weekly-layout search-layout">
+  <div>
+    <article class="card simple-panel">
+      <div class="section-head"><h3>Match overview</h3><span class="muted">Tournament desk</span></div>
+      <div class="draft-summary-grid premium-draft-summary-grid">
+        <article class="draft-column premium-draft-column">
+          <div class="draft-column-head">
+            <div><div class="sidebar-label">Player one</div><h4>{{ match.player1_name or 'TBD' }}</h4></div>
+            {% if p1_stats %}<span class="pill">{{ p1_stats.wins }}W · {{ p1_stats.losses }}L</span>{% endif %}
+          </div>
+          <div class="stack-list compact-gap">
+            <div class="list-row"><div class="row-main"><strong>Rating</strong><div class="muted">Profile level</div></div><div class="row-side"><span class="pill">{{ 'Tracked' if p1_stats else 'TBD' }}</span></div></div>
+            {% if p1_stats %}
+            <div class="list-row"><div class="row-main"><strong>Played</strong><div class="muted">Across site</div></div><div class="row-side"><span class="pill">{{ p1_stats.played }}</span></div></div>
+            <div class="list-row"><div class="row-main"><strong>Win rate</strong><div class="muted">All recorded matches</div></div><div class="row-side"><span class="pill">{{ ((p1_stats.wins / p1_stats.played * 100) if p1_stats.played else 0)|round(0)|int }}%</span></div></div>
+            {% endif %}
+          </div>
+        </article>
+
+        <article class="draft-column premium-draft-column">
+          <div class="draft-column-head">
+            <div><div class="sidebar-label">Player two</div><h4>{{ match.player2_name or 'TBD' }}</h4></div>
+            {% if p2_stats %}<span class="pill">{{ p2_stats.wins }}W · {{ p2_stats.losses }}L</span>{% endif %}
+          </div>
+          <div class="stack-list compact-gap">
+            <div class="list-row"><div class="row-main"><strong>Rating</strong><div class="muted">Profile level</div></div><div class="row-side"><span class="pill">{{ 'Tracked' if p2_stats else 'TBD' }}</span></div></div>
+            {% if p2_stats %}
+            <div class="list-row"><div class="row-main"><strong>Played</strong><div class="muted">Across site</div></div><div class="row-side"><span class="pill">{{ p2_stats.played }}</span></div></div>
+            <div class="list-row"><div class="row-main"><strong>Win rate</strong><div class="muted">All recorded matches</div></div><div class="row-side"><span class="pill">{{ ((p2_stats.wins / p2_stats.played * 100) if p2_stats.played else 0)|round(0)|int }}%</span></div></div>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+    </article>
+
+    <article class="card simple-panel top-gap-xl">
+      <div class="section-head"><h3>Result desk</h3><span class="muted">Report and verification</span></div>
+
+      {% if match.winner_id %}
+      <div class="signal-grid">
+        <div class="signal-card"><span class="signal-label">Final score</span><strong>{{ match.score1 }} - {{ match.score2 }}</strong></div>
+        <div class="signal-card"><span class="signal-label">Winner</span><strong>{{ match.player1_name if match.winner_id == match.player1_id else match.player2_name }}</strong></div>
+      </div>
+      {% elif match.provisional_winner_id %}
+      <div class="draft-lock-banner"><strong>Conflicting reports detected</strong><span class="muted">Current provisional winner: {{ match.provisional_winner_name or 'Unknown' }}. Waiting for admin review.</span></div>
+      {% else %}
+      <div class="signal-grid">
+        <div class="signal-card"><span class="signal-label">My report</span><strong>{{ 'Submitted' if my_reported else 'Not sent yet' }}</strong></div>
+        <div class="signal-card"><span class="signal-label">Opponent report</span><strong>{{ 'Submitted' if opponent_reported else 'Waiting' }}</strong></div>
+      </div>
+      {% endif %}
+
+      {% if can_report and not match.winner_id %}
+      <form method="post" class="form-grid compact-form-grid top-gap-xl">{{ csrf_input() }}
+        <label>Winner
+          <select name="winner_id">
+            {% if match.player1_id %}<option value="{{ match.player1_id }}">{{ match.player1_name }}</option>{% endif %}
+            {% if match.player2_id %}<option value="{{ match.player2_id }}">{{ match.player2_name }}</option>{% endif %}
+          </select>
+        </label>
+        <label>Score 1<input type="number" name="score1" min="0" value="1"></label>
+        <label>Score 2<input type="number" name="score2" min="0" value="0"></label>
+        {% if admin_mode %}
+        <label class="full">Admin note<textarea name="admin_note" rows="2" placeholder="Optional override note"></textarea></label>
+        {% endif %}
+        <div class="full action-row compact-actions"><button class="small-btn" type="submit">Submit result</button></div>
+      </form>
+      {% elif not can_report and not match.winner_id %}
+      <div class="empty-state">Only match participants or admins can submit the result for this bracket match.</div>
+      {% endif %}
+    </article>
+  </div>
+
+  <aside class="sidebar-stack">
+    <article class="card side-highlight">
+      <div class="card-title">Bracket status</div>
+      <div class="leader-row compact-row"><span>Round</span><strong>{{ match.round_number }}/{{ round_total }}</strong></div>
+      <div class="leader-row compact-row"><span>Best of</span><strong>BO{{ match.best_of }}</strong></div>
+      <div class="leader-row compact-row"><span>State</span><strong>{{ match.status|replace('_',' ')|title }}</strong></div>
+      {% if match.tournament_id %}
+      <div class="top-gap-sm"><a class="small-btn alt" href="{{ url_for('tournament_detail', tournament_id=match.tournament_id) }}">Back to tournament</a></div>
+      {% endif %}
+    </article>
+
+    {% if next_match %}
+    <article class="card side-highlight top-gap-xl">
+      <div class="card-title">Feeds into</div>
+      <p><strong>{{ next_match.player1_name or 'TBD' }} vs {{ next_match.player2_name or 'TBD' }}</strong></p>
+      <div class="muted">Round {{ next_match.round_number }}</div>
+      <div class="top-gap-sm"><a class="small-btn" href="{{ url_for('match_detail', match_id=next_match.id) }}">Open next match</a></div>
+    </article>
+    {% endif %}
+  </aside>
+</section>
+{% endblock %}

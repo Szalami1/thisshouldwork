@@ -1,0 +1,16 @@
+{% macro empty_panel(title, body, primary_href=None, primary_text=None, secondary_href=None, secondary_text=None, compact=False) -%}
+<div class="empty-state empty-panel{% if compact %} empty-panel-compact{% endif %}">
+  <div class="empty-icon">✦</div>
+  <div class="empty-copy">
+    <div class="empty-eyebrow">Ready state</div>
+    <strong>{{ title }}</strong>
+    <p>{{ body }}</p>
+    {% if primary_href or secondary_href %}
+    <div class="empty-actions">
+      {% if primary_href and primary_text %}<a class="small-btn" href="{{ primary_href }}">{{ primary_text }}</a>{% endif %}
+      {% if secondary_href and secondary_text %}<a class="small-btn alt" href="{{ secondary_href }}">{{ secondary_text }}</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{%- endmacro %}

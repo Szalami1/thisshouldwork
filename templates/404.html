@@ -1,0 +1,39 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Not Found | Aoe4IT{% endblock %}
+{% block content %}
+<section class="hero hero-weekly compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/Homepage.png') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">404</div>
+    <h1>That page is not on the board</h1>
+    <p>The link may be old, the match may have moved, or the page was never published.</p>
+    <div class="hero-actions">
+      <a class="cta-primary" href="{{ url_for('dashboard') }}">Go home</a>
+      <a class="cta-secondary" href="{{ url_for('search') }}">Search the site</a>
+    </div>
+  </div>
+</section>
+
+<section class="weekly-layout search-layout">
+  <div>
+    <article class="card simple-panel surface-card--accent">
+      <div class="section-head"><div><div class="hero-kicker">Recovery path</div><h3>Useful next steps</h3></div></div>
+      <div class="stack-list compact-gap">
+        <div class="list-row"><div class="row-main"><strong>Check the main navigation</strong><div class="muted">Home, Play, Tournaments, Ladders, Players, News, and Premium are all live routes.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Use search</strong><div class="muted">Player, event, and match lookups are often faster than guessing the URL.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Go back to the event hub</strong><div class="muted">Tournament pages are the best starting point for match and registration links.</div></div></div>
+      </div>
+    </article>
+  </div>
+  <aside class="sidebar-stack">
+    <article class="card side-highlight surface-card--sidebar">
+      <div class="card-title">Quick links</div>
+      <div class="stack-list compact-gap">
+        <a class="small-btn" href="{{ url_for('play') }}">Open Play</a>
+        <a class="small-btn alt" href="{{ url_for('tournaments') }}">Open Tournaments</a>
+        <a class="small-btn alt" href="{{ url_for('players') }}">Open Players</a>
+      </div>
+    </article>
+  </aside>
+</section>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}Aoe4IT Ladders{% endblock %}
+{% block content %}
+<section class="hero compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/header_market.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Compete. Climb. Conquer.</div>
+    <h1>Ladder</h1>
+    <p>Track ranked seasons, ratings, recent form, and the strongest active profiles.</p>
+  </div>
+</section>
+
+<section class="tab-strip slim underlined">
+  <a class="ladder-mode {% if mode == '1v1' %}active{% endif %}" href="{{ url_for('ladder', mode='1v1', view=view, q=search, region=region, rank=rank_filter) }}">1v1 Ladder</a>
+  <a class="ladder-mode {% if mode == '2v2' %}active{% endif %}" href="{{ url_for('ladder', mode='2v2', view=view, q=search, region=region, rank=rank_filter) }}">2v2 Ladder</a>
+  <a class="ladder-mode {% if mode == 'team' %}active{% endif %}" href="{{ url_for('ladder', mode='team', view=view, q=search, region=region, rank=rank_filter) }}">Team Ladder</a>
+  <a class="ladder-mode {% if mode == 'season' %}active{% endif %}" href="{{ url_for('ladder', mode='season', view=view, q=search, region=region, rank=rank_filter) }}">Ranked Season</a>
+</section>
+
+<section class="ladder-layout ladder-tier2-layout">
+  <div class="ladder-main">
+    <div class="tab-strip slim underlined">
+      <a class="subtab {% if view == 'leaderboard' %}active{% endif %}" href="{{ url_for('ladder', mode=mode, view='leaderboard', q=search, region=region, rank=rank_filter) }}">Leaderboard</a>
+      <a class="subtab {% if view == 'my-rank' %}active{% endif %}" href="{{ url_for('ladder', mode=mode, view='my-rank', q=search, region=region, rank=rank_filter) }}">My Rank</a>
+      <a class="subtab {% if view == 'rewards' %}active{% endif %}" href="{{ url_for('ladder', mode=mode, view='rewards', q=search, region=region, rank=rank_filter) }}">Season Rewards</a>
+      <a class="subtab {% if view == 'rules' %}active{% endif %}" href="{{ url_for('ladder', mode=mode, view='rules', q=search, region=region, rank=rank_filter) }}">Ladder Rules</a>
+    </div>
+
+    <form class="filter-row ladder-filters" method="get" action="{{ url_for('ladder') }}">
+      <input type="hidden" name="mode" value="{{ mode }}" />
+      <input type="hidden" name="view" value="{{ view }}" />
+      <input type="text" name="q" placeholder="Search players..." value="{{ search }}" />
+      <select name="region">
+        <option value="GLOBAL" {% if region == 'GLOBAL' %}selected{% endif %}>Region: Global</option>
+        <option value="SE" {% if region == 'SE' %}selected{% endif %}>Region: Sweden</option>
+        <option value="HU" {% if region == 'HU' %}selected{% endif %}>Region: Hungary</option>
+        <option value="DE" {% if region == 'DE' %}selected{% endif %}>Region: Germany</option>
+        <option value="FR" {% if region == 'FR' %}selected{% endif %}>Region: France</option>
+      </select>
+      <select name="rank">
+        <option value="all" {% if rank_filter == 'all' %}selected{% endif %}>Rank: All</option>
+        <option value="gold" {% if rank_filter == 'gold' %}selected{% endif %}>Gold</option>
+        <option value="platinum" {% if rank_filter == 'platinum' %}selected{% endif %}>Platinum</option>
+        <option value="diamond" {% if rank_filter == 'diamond' %}selected{% endif %}>Diamond</option>
+        <option value="conqueror" {% if rank_filter == 'conqueror' %}selected{% endif %}>Conqueror</option>
+      </select>
+      <button class="small-btn alt" type="submit">Apply Filters</button>
+    </form>
+
+    {% if view == 'leaderboard' %}
+    {% if ladder_rows %}<section class="podium-grid podium-grid-{{ [ladder_rows|length, 3]|min }} top-gap">
+      {% for row in ladder_rows[:3] %}
+      {% set stats = row.stats %}
+      {% set wr = ((stats.wins / stats.played * 100) if stats.played else 0)|round(1) %}
+      <article class="card podium-card podium-{{ row.rank }} {% if row.rank == 1 %}glow-orange{% endif %}">
+        <div class="podium-rank">#{{ row.rank }}</div>
+        <div class="profile-avatar big" style="background-image:url('{{ url_for('static', filename='flags/' ~ civ_flags[row.player.main_civ]) if row.player.main_civ and civ_flags.get(row.player.main_civ) else url_for('static', filename='art/default_avatar.svg') }}')">{{ row.player.display_name[0]|upper }}</div>
+        <h3>{{ row.player.display_name }}</h3>
+        <div class="rank-badge">{{ row.player.main_civ or 'Open pool' }}</div>
+        <div class="podium-rating">{{ row.player.rating }}</div>
+        <div class="podium-meta">
+          <span>{{ stats.wins }}W</span>
+          <span>{{ stats.losses }}L</span>
+          <span>{{ wr }}%</span>
+        </div>
+        <a class="small-btn alt" href="{{ url_for('player_detail', player_id=row.player.id) }}">Open profile</a>
+      </article>
+      {% endfor %}
+    </section>
+
+    <div class="table-wrap tier2-table-wrap top-gap">
+      <table class="ladder-table-upgraded">
+        <thead>
+          <tr><th>Rank</th><th>Player</th><th>Division</th><th>Rating</th><th>Record</th><th>Win Rate</th><th>Trend</th><th>Open</th></tr>
+        </thead>
+        <tbody>
+          {% for row in ladder_rows %}
+          {% set stats = row.stats %}
+          {% set winrate = ((stats.wins / stats.played * 100) if stats.played else 0)|round(1) %}
+          {% set band = 'Conqueror' if row.player.rating >= 1900 else ('Diamond' if row.player.rating >= 1600 else ('Platinum' if row.player.rating >= 1300 else 'Gold')) %}
+          {% set trend = 'Up' if stats.wins > stats.losses else ('Down' if stats.losses > stats.wins else 'Stable') %}
+          <tr class="{% if row.rank <= 3 %}elite-row{% endif %}">
+            <td><span class="rank-chip">#{{ row.rank }}</span></td>
+            <td>
+              <div class="ladder-player-cell">
+                <div class="avatar-sm" style="background-image:url('{{ url_for('static', filename='flags/' ~ civ_flags[row.player.main_civ]) if row.player.main_civ and civ_flags.get(row.player.main_civ) else url_for('static', filename='art/default_avatar.svg') }}')"></div>
+                <div>
+                  <a class="table-player-link" href="{{ url_for('player_detail', player_id=row.player.id) }}">{{ row.player.display_name }}</a>
+                  <div class="muted">{{ row.player.main_civ or 'Open pool' }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="division-badge division-{{ band|lower }}">{{ band }}</span></td>
+            <td><strong>{{ row.player.rating }}</strong></td>
+            <td>{{ stats.wins }} - {{ stats.losses }}</td>
+            <td>{{ winrate }}%</td>
+            <td>
+              {% if trend == 'Up' %}<span class="trend trend-up">▲ Rising</span>{% elif trend == 'Down' %}<span class="trend trend-down">▼ Falling</span>{% else %}<span class="trend trend-flat">• Stable</span>{% endif %}
+            </td>
+            <td><a class="small-btn alt compact-open" href="{{ url_for('player_detail', player_id=row.player.id) }}">Profile</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>{% else %}
+    <div class="table-empty-wrap">{{ empty_panel('No ladder yet', 'The first completed result will create the ladder board, podium, and season movement.', url_for('play'), 'Open queue', url_for('players'), 'Create profile') }}</div>{% endif %}
+    {% elif view == 'my-rank' %}
+    <article class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Personal view</div>
+          <h3>My position</h3>
+        </div>
+        <span class="pill">{{ season_window.name }}</span>
+      </div>
+      {% if current_player and current_player_row %}
+      <div class="player-overview-grid">
+        <div class="signal-card"><span class="signal-label">Rank</span><strong>#{{ current_player_row.rank }}</strong><div class="muted">Among visible players</div></div>
+        <div class="signal-card"><span class="signal-label">Rating</span><strong>{{ current_player_row.player.rating }}</strong><div class="muted">Current ladder number</div></div>
+        <div class="signal-card"><span class="signal-label">Win rate</span><strong>{{ ((current_player_row.stats.wins / current_player_row.stats.played * 100) if current_player_row.stats.played else 0)|round(1) }}%</strong><div class="muted">Across finished sets</div></div>
+        <div class="signal-card"><span class="signal-label">Profile</span><a class="small-btn alt" href="{{ url_for('player_detail', player_id=current_player.id) }}">Open profile</a><div class="muted">Edit civ, bio, and trust score</div></div>
+      </div>
+      {% else %}
+      {{ empty_panel('Personal rank is locked', 'Create a player profile first, then your ladder snapshot appears here with position, rating, and profile route.', url_for('players'), 'Create profile', url_for('play'), 'Open play', compact=True) }}
+      {% endif %}
+    </article>
+    {% elif view == 'rewards' %}
+    <article class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Season track</div>
+          <h3>Reward path</h3>
+        </div>
+        <span class="pill">{{ season_window.phase }}</span>
+      </div>
+      <div class="reward-row">
+        <div class="reward">Gold<br><span>1000+</span></div>
+        <div class="reward">Platinum<br><span>1300+</span></div>
+        <div class="reward">Diamond<br><span>1600+</span></div>
+        <div class="reward">Conqueror<br><span>1900+</span></div>
+      </div>
+      <div class="stack-list top-gap">
+        <div class="list-row"><div class="row-main"><strong>Gold rewards</strong><div class="muted">Baseline seasonal badge and profile accent.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Platinum rewards</strong><div class="muted">Animated plate frame and event priority marker.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Diamond rewards</strong><div class="muted">Premium banner slot and sharper stat card visuals.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Conqueror rewards</strong><div class="muted">Exclusive season crest, elite profile glow, and headline showcase.</div></div></div>
+      </div>
+    </article>
+    {% else %}
+    <article class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Competitive policy</div>
+          <h3>Ladder rules</h3>
+        </div>
+        <span class="pill">Rulebook</span>
+      </div>
+      <div class="stack-list">
+        <div class="list-row"><div class="row-main"><strong>Finished results only</strong><div class="muted">Only completed and admin-resolved sets impact rating.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Queue integrity</strong><div class="muted">A profile can only hold one active queue slot at a time.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Best of format</strong><div class="muted">BO1 and BO3 both count, but scorelines must match the selected winner.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Season timing</strong><div class="muted">Current season closes on {{ season_window.ends_at }}.</div></div></div>
+      </div>
+    </article>
+    {% endif %}
+  </div>
+  <aside class="sidebar-stack">
+    <article class="card ladder-overview upgraded-overview surface-card--sidebar">
+      <div class="card-title">Ladder Overview</div>
+      {% if current_player %}
+      <div class="rank-badge {% if current_player.rating >= 1900 %}gold-badge{% elif current_player.rating >= 1600 %}blue-badge{% endif %}">{% if current_player.rating >= 1900 %}Conqueror{% elif current_player.rating >= 1600 %}Diamond{% elif current_player.rating >= 1300 %}Platinum{% else %}Gold{% endif %}</div>
+      <div class="rating-big">{{ current_player.rating }} rating</div>
+      <p class="muted">Current civ: {{ current_player.main_civ or 'Unset' }}</p>
+      <div class="progress-track"><span style="width:{{ [100, ((current_player.rating-1000)/9)|int]|min if current_player.rating>1000 else 20 }}%"></span></div>
+      <div class="muted">Next breakpoint: {{ ((current_player.rating//100)+1)*100 }}</div>
+      <div class="overview-notes top-gap">
+        <div class="leader-row compact-row"><span>Best lane</span><strong>{{ mode|upper }}</strong></div>
+        <div class="leader-row compact-row"><span>Season focus</span><strong>{{ season_window.phase }}</strong></div>
+      </div>
+      {% else %}
+      <div class="rank-badge">Unranked</div>
+      <div class="rating-big">Create a player</div>
+      <p class="muted">Log in, create your profile, and start your climb.</p>
+      {% endif %}
+    </article>
+    <article class="card rewards-card surface-card--sidebar">
+      <div class="card-title">Season Snapshot</div>
+      <div class="leader-row compact-row"><span>Season</span><strong>{{ season_window.name }}</strong></div>
+      <div class="leader-row compact-row"><span>Phase</span><strong>{{ season_window.phase }}</strong></div>
+      <div class="leader-row compact-row"><span>Mode</span><strong>{{ mode|upper }}</strong></div>
+      <div class="leader-row compact-row"><span>Ends</span><strong>{{ season_window.ends_at[:10] }}</strong></div>
+    </article>
+    <article class="card recent-matches upgraded-recent-matches surface-card--sidebar">
+      <div class="card-title">Recent Matches</div>
+      {% for row in recent[:4] %}
+      <div class="match-row">
+        <div class="match-left"><div class="avatar-sm"></div><div><strong>{{ row.player1_name }} vs {{ row.player2_name }}</strong><div class="muted">{{ row.context_name }}</div></div></div>
+        <div class="muted">{% if row.score1 is not none and row.score2 is not none %}{{ row.score1 }}-{{ row.score2 }}{% else %}Pending{% endif %}</div>
+      </div>
+      {% else %}
+      {{ empty_panel('Recent ladder history is empty', 'As soon as ranked results are finished, this rail becomes the fast view into recent score lines.', url_for('play'), 'Open play', url_for('tournaments'), 'Open tournaments', compact=True) }}
+      {% endfor %}
+    </article>
+  </aside>
+</section>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Server Error | Aoe4IT{% endblock %}
+{% block content %}
+<section class="hero hero-weekly compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/Homepage.png') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">500</div>
+    <h1>The server hit a bad state</h1>
+    <p>The issue was logged. Refresh once, then try the flow again from the page you came from.</p>
+    <div class="hero-actions">
+      <a class="cta-primary" href="{{ url_for('dashboard') }}">Return home</a>
+      <a class="cta-secondary" href="{{ url_for('play') }}">Open Play</a>
+    </div>
+  </div>
+</section>
+
+<section class="weekly-layout search-layout">
+  <div>
+    <article class="card simple-panel surface-card--accent">
+      <div class="section-head"><div><div class="hero-kicker">What to do</div><h3>Fast recovery</h3></div></div>
+      <div class="stack-list compact-gap">
+        <div class="list-row"><div class="row-main"><strong>Refresh once</strong><div class="muted">Transient staging issues often clear on the next request.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Retry from the source page</strong><div class="muted">For forms, return to the previous page so the CSRF token and state are fresh.</div></div></div>
+        <div class="list-row"><div class="row-main"><strong>Capture the URL and action</strong><div class="muted">That makes the production fix faster if anything still slips through on Render.</div></div></div>
+      </div>
+    </article>
+  </div>
+  <aside class="sidebar-stack">
+    <article class="card side-highlight surface-card--sidebar">
+      <div class="card-title">Status endpoints</div>
+      <div class="stack-list compact-gap">
+        <a class="small-btn" href="{{ url_for('healthz') }}">Health</a>
+        <a class="small-btn alt" href="{{ url_for('readyz') }}">Readiness</a>
+      </div>
+    </article>
+  </aside>
+</section>
+{% endblock %}

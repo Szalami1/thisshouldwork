@@ -1,0 +1,242 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Practice Room {{ room.id }} | Aoe4IT{% endblock %}
+{% block body_class %}client-body{% endblock %}
+{% block content %}
+<div class="subpage-band"><div class="subpage-band-inner"><div class="subpage-band-eyebrow">Room control</div><h1 class="subpage-band-title">Practice Room</h1></div></div>
+{% set map_turn_name = room.player1_name if map_draft.current_player_id == room.player1_id else room.player2_name %}
+{% set civ_turn_name = room.player1_name if civ_draft.current_player_id == room.player1_id else room.player2_name %}
+{% set p1_active = room.status in ['civ_ban','civ_draft'] and (civ_draft.current_player_id == room.player1_id or room.player1_id in civ_draft.pending_snipe_player_ids) %}
+{% set p2_active = room.status in ['civ_ban','civ_draft'] and (civ_draft.current_player_id == room.player2_id or room.player2_id in civ_draft.pending_snipe_player_ids) %}
+<div data-room-watch-url="{{ url_for('practice_room_state', room_id=room.id) }}" data-room-updated-at="{{ room.updated_at }}" data-room-status="{{ room.status }}" data-room-map-actions="{{ map_draft.actions|length }}" data-room-civ-actions="{{ civ_draft.actions|length }}"></div>
+<div class="room-data-sync" data-room-chosen-map="{{ room.chosen_map or '' }}" data-room-p1-civ="{{ room.player1_final_civ or '' }}" data-room-p2-civ="{{ room.player2_final_civ or '' }}"></div>
+<section class="room-premium-hero card">
+  <div class="room-duel-head">
+    <div>
+      <div class="eyebrow">Practice room {{ room.id }}</div>
+      <h2 class="room-duel-title">{{ room.player1_name }} <span>vs</span> {{ room.player2_name }}</h2>
+      <p class="hero-copy">{{ 'BO3' if room.best_of == 3 else 'BO1' }} room control.</p>
+    </div>
+    <div class="duel-side-meta">
+      <span class="pill">{{ 'BO3' if room.best_of == 3 else 'BO1' }}</span>
+      <span class="pill pill-status pill-{{ room.status|replace('_','-') }}">{{ room.status|replace('_', ' ') }}</span>
+      {% if room.chosen_map %}<span class="pill">{{ room.chosen_map }}</span>{% endif %}
+      {% if room.player1_final_civ %}<span class="pill">{{ room.player1_name }}: {{ room.player1_final_civ }}</span>{% endif %}
+      {% if room.player2_final_civ %}<span class="pill">{{ room.player2_name }}: {{ room.player2_final_civ }}</span>{% endif %}
+    </div>
+  </div>
+
+  {% if room.status == 'awaiting_accept' %}
+  <div class="premium-pressure-rail" data-room-alert="match-found" data-room-id="{{ room.id }}" data-room-state="awaiting_accept">
+    <div>
+      <strong>Match found</strong>
+      <div class="muted">Confirmation window is live.</div>
+    </div>
+    <div class="pressure-banner-actions">
+      <div class="countdown-cluster">
+        <span class="sidebar-label">Time left</span>
+        <strong class="countdown-text premium-countdown" data-countdown-target="{{ room.ready_expires_at|replace(' ', 'T') }}">--:--</strong>
+      </div>
+      <div class="countdown-bar premium-countdown-bar" data-countdown-bar="{{ room.ready_expires_at|replace(' ', 'T') }}" data-started-at="{{ room.created_at|replace(' ', 'T') }}"></div>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card stage-card premium-stage-card">
+  <div class="section-head">
+    <h3>Room progression</h3>
+    <span class="muted">Competitive room state</span>
+  </div>
+  <div class="stage-track premium-stage-track seven-steps">
+    <div class="stage-step is-done"><span class="stage-dot"></span><div><strong>Match found</strong><div class="muted">Room created.</div></div></div>
+    <div class="stage-step {% if room.status in ['live','awaiting_confirmation','provisional','completed'] %}is-done{% elif room.status == 'awaiting_accept' %}is-live{% endif %}"><span class="stage-dot"></span><div><strong>Ready check</strong><div class="muted">Both sides lock in.</div></div></div>
+    <div class="stage-step {% if room.status in ['civ_ban','civ_draft','live','awaiting_confirmation','provisional','completed'] %}is-done{% elif room.status == 'map_draft' %}is-live{% endif %}"><span class="stage-dot"></span><div><strong>Map draft</strong><div class="muted">Battlefield control.</div></div></div>
+    <div class="stage-step {% if room.status in ['civ_draft','live','awaiting_confirmation','provisional','completed'] %}is-done{% elif room.status == 'civ_ban' %}is-live{% endif %}"><span class="stage-dot"></span><div><strong>Civ bans</strong><div class="muted">3 bans each.</div></div></div>
+    <div class="stage-step {% if room.status in ['live','awaiting_confirmation','provisional','completed'] %}is-done{% elif room.status == 'civ_draft' %}is-live{% endif %}"><span class="stage-dot"></span><div><strong>Civ draft</strong><div class="muted">Hidden picks and secret snipes.</div></div></div>
+    <div class="stage-step {% if room.status in ['awaiting_confirmation','provisional','completed'] %}is-done{% elif room.status == 'live' %}is-live{% endif %}"><span class="stage-dot"></span><div><strong>Play the set</strong><div class="muted">Series goes live.</div></div></div>
+    <div class="stage-step {% if room.status in ['provisional','completed'] %}is-done{% elif room.status == 'awaiting_confirmation' %}is-live{% endif %}"><span class="stage-dot"></span><div><strong>Report</strong><div class="muted">Result desk.</div></div></div>
+  </div>
+</section>
+
+{% if room.status == 'awaiting_confirmation' %}
+<section class="alert-strip alert-warn"><div><strong>Waiting for second report</strong><div class="muted">One side has submitted.</div></div></section>
+{% elif room.status == 'provisional' %}
+<section class="alert-strip alert-danger"><div><strong>Conflicting reports detected</strong><div class="muted">Review pending.</div></div></section>
+{% elif room.status == 'completed' %}
+<section class="alert-strip alert-good"><div><strong>Result locked</strong><div class="muted">Room closed.</div></div></section>
+{% elif room.status == 'cancelled' and room.cancellation_reason %}
+<section class="alert-strip alert-danger"><div><strong>Room cancelled</strong><div class="muted">{{ room.cancellation_reason }}</div></div></section>
+{% endif %}
+
+<div class="grid-two room-premium-grid">
+  <section class="card">
+    <div class="section-head"><h3>Player readiness</h3><span class="muted">Lock status</span></div>
+    <div class="player-tiles-grid duel-ready-grid">
+      <article class="player-tile {% if room.accepted1 %}is-ready{% endif %} {% if p1_active %}is-turn-owner{% endif %}">
+        <div class="sidebar-label">Player one</div>
+        <strong>{{ room.player1_name }}</strong>
+        <div class="muted">{{ 'Accepted and locked in' if room.accepted1 else 'Waiting on response' }}</div>
+        <div class="pill-row left-pills top-gap">
+          <span class="pill">{{ 'Ready' if room.accepted1 else 'Waiting' }}</span>
+          {% if room.player1_report_winner_id is not none %}<span class="pill">Reported</span>{% endif %}
+          {% if room.player1_id in civ_draft.pending_snipe_player_ids %}<span class="pill pill-accent">Secret snipe pending</span>{% endif %}
+        </div>
+      </article>
+      <article class="player-tile {% if room.accepted2 %}is-ready{% endif %} {% if p2_active %}is-turn-owner{% endif %}">
+        <div class="sidebar-label">Player two</div>
+        <strong>{{ room.player2_name }}</strong>
+        <div class="muted">{{ 'Accepted and locked in' if room.accepted2 else 'Waiting on response' }}</div>
+        <div class="pill-row left-pills top-gap">
+          <span class="pill">{{ 'Ready' if room.accepted2 else 'Waiting' }}</span>
+          {% if room.player2_report_winner_id is not none %}<span class="pill">Reported</span>{% endif %}
+          {% if room.player2_id in civ_draft.pending_snipe_player_ids %}<span class="pill pill-accent">Secret snipe pending</span>{% endif %}
+        </div>
+      </article>
+    </div>
+    {% if room.status == 'awaiting_accept' and can_interact %}
+    <div class="action-row top-gap">
+      <form method="post" action="{{ url_for('accept_practice_room', room_id=room.id) }}">{{ csrf_input() }}<button class="btn btn-primary" type="submit">Accept room</button></form>
+      <form method="post" action="{{ url_for('decline_practice_room', room_id=room.id) }}">{{ csrf_input() }}<button class="btn btn-secondary" type="submit">Decline</button></form>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="section-head"><h3>Room signals</h3><span class="muted">Room telemetry</span></div>
+    <div class="signal-grid">
+      <div class="signal-card"><span class="signal-label">Series</span><strong>{{ 'BO3' if room.best_of == 3 else 'BO1' }}</strong></div>
+      <div class="signal-card"><span class="signal-label">Map</span><strong>{{ room.chosen_map or 'Pending' }}</strong></div>
+      <div class="signal-card"><span class="signal-label">P1 civ</span><strong>{{ room.player1_final_civ or 'Pending' }}</strong></div>
+      <div class="signal-card"><span class="signal-label">P2 civ</span><strong>{{ room.player2_final_civ or 'Pending' }}</strong></div>
+      <div class="signal-card"><span class="signal-label">Status</span><strong>{{ room.status|replace('_', ' ') }}</strong></div>
+      <div class="signal-card"><span class="signal-label">Winner</span><strong>{{ room.winner_name or room.provisional_winner_name or 'Pending' }}</strong></div>
+    </div>
+  </section>
+</div>
+
+<section class="card draft-command-card">
+  <div class="draft-command-head">
+    <div>
+      <div class="eyebrow">Draft control</div>
+      <h3>
+        {% if room.status == 'map_draft' %}Map board live{% elif room.status == 'civ_ban' %}Civ bans live{% elif room.status == 'civ_draft' %}Civ board live{% else %}Room locked in{% endif %}
+      </h3>
+    </div>
+    <div class="pill-row left-pills">
+      {% if room.status == 'map_draft' and map_draft.current_player_id %}
+        <span class="pill pill-accent">Turn: {{ map_turn_name }}</span>
+        <span class="pill">{{ map_draft.current_action|title }}</span>
+      {% elif room.status == 'civ_ban' and civ_draft.current_player_id %}
+        <span class="pill pill-accent">Turn: {{ civ_turn_name }}</span>
+        <span class="pill">Ban</span>
+      {% elif room.status == 'civ_draft' %}
+        {% if civ_draft.current_action == 'hidden_pick' %}
+          <span class="pill pill-accent">Turn: {{ civ_turn_name }}</span>
+          <span class="pill">Hidden pick</span>
+        {% elif civ_draft.current_action == 'hidden_snipe' %}
+          <span class="pill pill-accent">Secret snipe</span>
+          <span class="pill">{{ civ_draft.pending_snipe_player_ids|length }} pending</span>
+        {% endif %}
+      {% else %}
+        <span class="pill">Draft closed</span>
+      {% endif %}
+      {% if room.chosen_map %}<span class="pill">{{ room.chosen_map }}</span>{% endif %}
+      {% if room.player1_final_civ %}<span class="pill">{{ room.player1_final_civ }}</span>{% endif %}
+      {% if room.player2_final_civ %}<span class="pill">{{ room.player2_final_civ }}</span>{% endif %}
+    </div>
+  </div>
+
+  {% if room.status == 'map_draft' %}
+  <div class="draft-ownership-strip is-map {% if can_interact and current_player and current_player.id == map_draft.current_player_id %}is-your-turn{% endif %}">
+    <div class="draft-turn-badge">Map draft live</div>
+    <div class="draft-turn-copy"><span class="sidebar-label">On turn</span><strong>{{ map_turn_name }}</strong><span class="muted">{{ map_draft.current_action|title }} phase</span></div>
+  </div>
+  {% elif room.status == 'civ_ban' %}
+  <div class="draft-ownership-strip is-ban {% if can_interact and current_player and current_player.id == civ_draft.current_player_id %}is-your-turn{% endif %}">
+    <div class="draft-turn-badge">Civ bans live</div>
+    <div class="draft-turn-copy"><span class="sidebar-label">On turn</span><strong>{{ civ_turn_name }}</strong><span class="muted">Ban phase</span></div>
+  </div>
+  {% elif room.status == 'civ_draft' %}
+  <div class="draft-ownership-strip is-civ {% if civ_draft.current_action == 'hidden_pick' and can_interact and current_player and current_player.id == civ_draft.current_player_id %}is-your-turn{% elif civ_draft.current_action == 'hidden_snipe' and current_player and current_player.id in civ_draft.pending_snipe_player_ids %}is-your-turn{% endif %}">
+    <div class="draft-turn-badge">Civ draft live</div>
+    <div class="draft-turn-copy">
+      {% if civ_draft.current_action == 'hidden_pick' %}
+      <span class="sidebar-label">On turn</span><strong>{{ civ_turn_name }}</strong><span class="muted">Hidden pick phase</span>
+      {% else %}
+      <span class="sidebar-label">Secret snipe</span><strong>{{ civ_draft.pending_snipe_player_ids|length }} side{{ '' if civ_draft.pending_snipe_player_ids|length == 1 else 's' }} pending</strong><span class="muted">Reveal at lock</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+{% if room.status == 'map_draft' %}
+<section class="card draft-phase-card">
+  <div class="draft-phase-head"><div><div class="eyebrow">Map draft</div><h3>Battlefield control</h3></div><div class="pill-row left-pills"><span class="pill pill-accent">{{ map_turn_name }}</span><span class="pill">{{ map_draft.current_action|title }}</span><span class="pill">Turn {{ (map_draft.actions|length) + 1 }}</span></div></div>
+  {% if map_draft.actions %}<div class="draft-timeline-grid">{% for action in map_draft.actions %}<div class="draft-timeline-card"><div class="timeline-topline">Turn {{ action.turn_number }}</div><strong>{{ action.map_name }}</strong><div class="muted">{{ action.player_name }} · {{ action.action_type }}</div></div>{% endfor %}</div>{% endif %}
+  <div class="draft-turn-banner {% if can_interact and current_player and current_player.id == map_draft.current_player_id %}is-your-turn{% endif %}"><div><div class="sidebar-label">Current action</div><strong>{% if can_interact and current_player and current_player.id == map_draft.current_player_id %}Your move{% else %}{{ map_turn_name }} on move{% endif %}</strong></div><div class="draft-turn-banner-meta">{{ map_draft.current_action|title }}</div></div>
+  <div class="map-action-grid premium-action-grid">{% for map_name in map_draft.available_maps %}{% if can_interact and current_player and current_player.id == map_draft.current_player_id %}<form method="post" action="{{ url_for('submit_map_action', room_id=room.id) }}" class="draft-action-form">{{ csrf_input() }}<input type="hidden" name="map_name" value="{{ map_name }}"><button class="draft-action-card map-action-card is-clickable" type="submit"><span class="action-topline">{{ map_draft.current_action|title }}</span><strong>{{ map_name }}</strong><span class="action-meta">Execute turn</span></button></form>{% else %}<div class="draft-action-card map-action-card is-locked"><span class="action-topline">{{ map_draft.current_action|title }}</span><strong>{{ map_name }}</strong><span class="action-meta">Waiting</span></div>{% endif %}{% endfor %}</div>
+</section>
+{% endif %}
+
+{% if room.status in ['civ_ban','civ_draft','live','awaiting_confirmation','provisional','completed'] %}
+<section class="card draft-phase-card">
+  <div class="draft-phase-head"><div><div class="eyebrow">Civilisation control</div><h3>{% if room.status == 'civ_ban' %}Ban phase{% else %}Draft board{% endif %}</h3></div><div class="pill-row left-pills"><span class="pill">{{ civ_draft.banned_civs|length }}/6 bans</span>{% if civ_draft.reveal_ready %}<span class="pill">Picks revealed</span>{% endif %}</div></div>
+  <div class="two-col draft-summary-grid premium-draft-summary-grid">
+    <article class="draft-column premium-draft-column {% if p1_active %}is-turn-owner{% endif %}">
+      <div class="draft-column-head"><div><div class="sidebar-label">Player one</div><h4>{{ room.player1_name }}</h4></div>{% if civ_draft.player1_final %}<span class="pill pill-accent">{{ civ_draft.player1_final }}</span>{% endif %}</div>
+      <div class="draft-chip-row">{% for civ in civ_draft.player1_bans %}<span class="pill pill-ban">Ban: {{ civ }}</span>{% endfor %}</div>
+      {% if civ_draft.reveal_ready %}
+      <div class="draft-grid civ-mini-grid premium-civ-mini-grid">{% for civ in civ_draft.player1_hidden %}<div class="civ-card premium-civ-card {% if civ_draft.player2_snipe == civ %}civ-card-snipe{% endif %}"><div class="civ-card-media">{% if civ_flags.get(civ) %}<img src="{{ url_for('static', filename='flags/' ~ civ_flags[civ]) }}" alt="{{ civ }}">{% endif %}</div><span>{{ civ }}</span>{% if civ_draft.player2_snipe == civ %}<small>Sniped</small>{% endif %}</div>{% endfor %}</div>
+      {% else %}
+      <div class="hidden-picks-box premium-hidden-box {% if p1_active %}is-turn-owner{% endif %}">{% if current_player and current_player.id == room.player1_id %}{% if civ_draft.player1_hidden %}{% for civ in civ_draft.player1_hidden %}<span class="pill">{{ civ }}</span>{% endfor %}{% else %}<span class="muted">No civ locked yet.</span>{% endif %}{% else %}<span class="muted">{{ civ_draft.player1_hidden|length }} civ locked.</span>{% endif %}</div>
+      {% endif %}
+    </article>
+    <article class="draft-column premium-draft-column {% if p2_active %}is-turn-owner{% endif %}">
+      <div class="draft-column-head"><div><div class="sidebar-label">Player two</div><h4>{{ room.player2_name }}</h4></div>{% if civ_draft.player2_final %}<span class="pill pill-accent">{{ civ_draft.player2_final }}</span>{% endif %}</div>
+      <div class="draft-chip-row">{% for civ in civ_draft.player2_bans %}<span class="pill pill-ban">Ban: {{ civ }}</span>{% endfor %}</div>
+      {% if civ_draft.reveal_ready %}
+      <div class="draft-grid civ-mini-grid premium-civ-mini-grid">{% for civ in civ_draft.player2_hidden %}<div class="civ-card premium-civ-card {% if civ_draft.player1_snipe == civ %}civ-card-snipe{% endif %}"><div class="civ-card-media">{% if civ_flags.get(civ) %}<img src="{{ url_for('static', filename='flags/' ~ civ_flags[civ]) }}" alt="{{ civ }}">{% endif %}</div><span>{{ civ }}</span>{% if civ_draft.player1_snipe == civ %}<small>Sniped</small>{% endif %}</div>{% endfor %}</div>
+      {% else %}
+      <div class="hidden-picks-box premium-hidden-box {% if p2_active %}is-turn-owner{% endif %}">{% if current_player and current_player.id == room.player2_id %}{% if civ_draft.player2_hidden %}{% for civ in civ_draft.player2_hidden %}<span class="pill">{{ civ }}</span>{% endfor %}{% else %}<span class="muted">No civ locked yet.</span>{% endif %}{% else %}<span class="muted">{{ civ_draft.player2_hidden|length }} civ locked.</span>{% endif %}</div>
+      {% endif %}
+    </article>
+  </div>
+
+  {% if room.status == 'civ_ban' %}
+  <div class="draft-turn-banner {% if can_interact and current_player and current_player.id == civ_draft.current_player_id %}is-your-turn{% endif %}"><div><div class="sidebar-label">Current action</div><strong>{% if can_interact and current_player and current_player.id == civ_draft.current_player_id %}Your ban{% else %}{{ civ_turn_name }} on ban{% endif %}</strong></div><div class="draft-turn-banner-meta">Ban</div></div>
+  <div class="draft-grid civ-grid premium-civ-grid">{% for civ in civ_draft.current_ban_options %}{% if can_interact and current_player and current_player.id == civ_draft.current_player_id %}<form method="post" action="{{ url_for('submit_civ_ban', room_id=room.id) }}">{{ csrf_input() }}<input type="hidden" name="civ_name" value="{{ civ }}"><button class="civ-card civ-card-button premium-civ-card-button civ-card-ban-button" type="submit"><div class="civ-card-media">{% if civ_flags.get(civ) %}<img src="{{ url_for('static', filename='flags/' ~ civ_flags[civ]) }}" alt="{{ civ }}">{% endif %}</div><span>{{ civ }}</span><small>Ban</small></button></form>{% else %}<div class="civ-card premium-civ-card civ-card-ban-ghost"><div class="civ-card-media">{% if civ_flags.get(civ) %}<img src="{{ url_for('static', filename='flags/' ~ civ_flags[civ]) }}" alt="{{ civ }}">{% endif %}</div><span>{{ civ }}</span><small>Waiting</small></div>{% endif %}{% endfor %}</div>
+  {% elif room.status == 'civ_draft' %}
+    {% if civ_draft.current_action == 'hidden_pick' %}
+    <div class="draft-turn-banner {% if can_interact and current_player and current_player.id == civ_draft.current_player_id %}is-your-turn{% endif %}"><div><div class="sidebar-label">Current action</div><strong>{% if can_interact and current_player and current_player.id == civ_draft.current_player_id %}Your hidden pick{% else %}{{ civ_turn_name }} on hidden pick{% endif %}</strong></div><div class="draft-turn-banner-meta">Hidden pick</div></div>
+    {% if can_interact and current_player and current_player.id == civ_draft.current_player_id %}<div class="draft-grid civ-grid premium-civ-grid">{% for civ in civ_draft.current_pick_options %}<form method="post" action="{{ url_for('submit_hidden_civ_pick', room_id=room.id) }}">{{ csrf_input() }}<input type="hidden" name="civ_name" value="{{ civ }}"><button class="civ-card civ-card-button premium-civ-card-button" type="submit"><div class="civ-card-media">{% if civ_flags.get(civ) %}<img src="{{ url_for('static', filename='flags/' ~ civ_flags[civ]) }}" alt="{{ civ }}">{% endif %}</div><span>{{ civ }}</span></button></form>{% endfor %}</div>{% endif %}
+    {% elif civ_draft.current_action == 'hidden_snipe' %}
+    <div class="draft-turn-banner {% if current_player and current_player.id in civ_draft.pending_snipe_player_ids %}is-your-turn{% endif %}"><div><div class="sidebar-label">Current action</div><strong>{% if current_player and current_player.id in civ_draft.pending_snipe_player_ids %}Submit your secret snipe{% else %}Secret snipe in progress{% endif %}</strong></div><div class="draft-turn-banner-meta">Reveal at lock</div></div>
+    {% if current_player and current_player.id in civ_draft.pending_snipe_player_ids %}<div class="draft-grid civ-mini-grid premium-civ-mini-grid premium-snipe-grid">{% for civ in civ_draft.current_snipe_options %}<form method="post" action="{{ url_for('submit_civ_snipe', room_id=room.id) }}">{{ csrf_input() }}<input type="hidden" name="civ_name" value="{{ civ }}"><button class="civ-card civ-card-button premium-civ-card civ-card-snipe-button premium-snipe-card" type="submit"><div class="civ-card-media">{% if civ_flags.get(civ) %}<img src="{{ url_for('static', filename='flags/' ~ civ_flags[civ]) }}" alt="{{ civ }}">{% endif %}</div><span>Snipe {{ civ }}</span></button></form>{% endfor %}</div>{% else %}<div class="draft-lock-banner"><strong>Secret snipe locked</strong><span class="muted">Waiting for the other side.</span></div>{% endif %}
+    {% endif %}
+  {% else %}
+    <div class="draft-lock-banner is-complete"><strong>Civs locked</strong><span class="muted">{{ room.player1_final_civ }} and {{ room.player2_final_civ }}</span></div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if room.status in ['live', 'awaiting_confirmation', 'provisional'] and can_interact %}
+<section class="card report-card premium-report-card">
+  <div class="section-head"><h3>Report result</h3><span class="muted">Result desk</span></div>
+  <form method="post" class="form-grid">{{ csrf_input() }}
+    <label>Winner<select name="winner_id"><option value="{{ room.player1_id }}">{{ room.player1_name }}</option><option value="{{ room.player2_id }}">{{ room.player2_name }}</option></select></label>
+    <label>Score for {{ room.player1_name }}<input type="number" name="score1" min="0" value="1"></label>
+    <label>Score for {{ room.player2_name }}<input type="number" name="score2" min="0" value="0"></label>
+    {% if admin_mode %}<label class="full">Admin note<textarea name="admin_note" rows="3"></textarea></label>{% endif %}
+    <button class="btn btn-primary" type="submit">Submit result</button>
+  </form>
+</section>
+{% endif %}
+
+{% if room.chosen_map and room.status in ['civ_ban','civ_draft', 'live', 'awaiting_confirmation', 'provisional', 'completed'] %}
+<div class="draft-splash-overlay" data-draft-splash="map" data-splash-key="room-{{ room.id }}-map-{{ room.chosen_map|replace(' ','-') }}"><div class="draft-splash-card is-map"><div class="eyebrow">Map locked</div><strong>{{ room.chosen_map }}</strong><span>Draft advanced.</span></div></div>
+{% endif %}
+{% if room.player1_final_civ and room.player2_final_civ and room.status in ['live', 'awaiting_confirmation', 'provisional', 'completed'] %}
+<div class="draft-splash-overlay" data-draft-splash="civ" data-splash-key="room-{{ room.id }}-civ-{{ room.player1_final_civ|replace(' ','-') }}-{{ room.player2_final_civ|replace(' ','-') }}"><div class="draft-splash-card is-civ"><div class="eyebrow">Civs locked</div><strong>{{ room.player1_final_civ }} vs {{ room.player2_final_civ }}</strong><span>Set live.</span></div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}Search | Aoe4IT{% endblock %}
+{% block content %}
+<section class="hero hero-players compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/nav_games_age4.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Global search</div>
+    <h1>Search</h1>
+    <p>Find players, events, and bracket activity across the platform.</p>
+  </div>
+</section>
+
+<section class="weekly-layout search-layout">
+  <div>
+    <article class="card search-hero-card">
+      <div class="card-title">Search Console</div>
+      <form class="filter-row search-page-form" method="get" action="{{ url_for('search') }}">
+        <input name="q" type="text" value="{{ query }}" placeholder="Search players, tournaments, civs, countries..." autofocus>
+        <button class="small-btn" type="submit">Search</button>
+      </form>
+      {% if query %}
+      <div class="pill-row left-pills top-gap-sm">
+        <span class="pill pill-accent">{{ player_rows|length }} players</span>
+        <span class="pill">{{ tournament_rows|length }} tournaments</span>
+        <span class="pill">{{ match_rows|length }} matches</span>
+      </div>
+      {% else %}
+      <p class="muted top-gap-sm">Type a player name, civ, country code, or event title to surface the relevant page fast.</p>
+      {% endif %}
+    </article>
+
+    <article class="card simple-panel top-gap-xl">
+      <div class="section-head"><h3>Players</h3><span class="muted">Profiles and ladder identities</span></div>
+      {% if query and player_rows %}
+      <div class="stack-list">
+        {% for player in player_rows %}
+        <a class="list-row interactive-row" href="{{ url_for('player_detail', player_id=player.id) }}">
+          <div class="row-main">
+            <strong>{{ player.display_name }}</strong>
+            <div class="muted">{{ player.main_civ or 'No main civ' }}{% if player.country %} · {{ player.country }}{% endif %}</div>
+          </div>
+          <div class="row-side"><span class="pill">{{ player.rating }}</span></div>
+        </a>
+        {% endfor %}
+      </div>
+      {% elif query %}
+      {{ empty_panel('No player profiles matched', 'Try a wider name, country, or civ search to surface profiles.', url_for('players'), 'Browse players', compact=True) }}
+      {% else %}
+      {{ empty_panel('Search is ready', 'Run a search to see player results, tournament cards, and match references here.', url_for('players'), 'Browse players', url_for('tournaments'), 'Open tournaments', compact=True) }}
+      {% endif %}
+    </article>
+
+    <article class="card simple-panel top-gap-xl">
+      <div class="section-head"><h3>Tournaments</h3><span class="muted">Events and cups</span></div>
+      {% if query and tournament_rows %}
+      <div class="stack-list">
+        {% for tournament in tournament_rows %}
+        <a class="list-row interactive-row" href="{{ url_for('tournament_detail', tournament_id=tournament.id) }}">
+          <div class="row-main">
+            <strong>{{ tournament.name }}</strong>
+            <div class="muted">{{ tournament.starts_at }} · {{ tournament.status|title }}</div>
+          </div>
+          <div class="row-side"><span class="pill">{{ tournament.reg_count or 0 }} regs</span></div>
+        </a>
+        {% endfor %}
+      </div>
+      {% elif query %}
+      {{ empty_panel('No tournaments matched', 'Try an event name, winner, or weekly phrasing to surface tournament results.', url_for('tournaments'), 'Open tournaments', compact=True) }}
+      {% else %}
+      {{ empty_panel('Tournament search is standing by', 'Tournament results appear here after you search for an event or winner.', url_for('tournaments'), 'Open weekly hub', compact=True) }}
+      {% endif %}
+    </article>
+  </div>
+
+  <aside class="sidebar-stack">
+    <article class="card simple-panel">
+      <div class="section-head"><h3>Matches</h3><span class="muted">Bracket activity</span></div>
+      {% if query and match_rows %}
+      <div class="stack-list">
+        {% for match in match_rows %}
+        <a class="list-row interactive-row" href="{{ url_for('match_detail', match_id=match.id) }}">
+          <div class="row-main">
+            <strong>{{ match.player1_name or 'TBD' }} vs {{ match.player2_name or 'TBD' }}</strong>
+            <div class="muted">{{ match.tournament_name or 'No tournament' }}</div>
+          </div>
+          <div class="row-side"><span class="pill pill-status pill-{{ match.status|replace('_','-') }}">{{ match.status|replace('_',' ') }}</span></div>
+        </a>
+        {% endfor %}
+      </div>
+      {% elif query %}
+      {{ empty_panel('No bracket matches matched', 'Try a player name or tournament title to surface bracket activity.', url_for('tournaments'), 'Open tournaments', compact=True) }}
+      {% else %}
+      {{ empty_panel('Match search is waiting', 'Search for players or tournament names to surface bracket matches and result cards.', url_for('play'), 'Open play', compact=True) }}
+      {% endif %}
+    </article>
+
+    <article class="card side-highlight top-gap-xl">
+      <div class="card-title">Search Tips</div>
+      <div class="mission-row"><div class="mission-dot"></div><span>Player names like Corvinus1 or Lab Alpha</span></div>
+      <div class="mission-row"><div class="mission-dot"></div><span>Civs like English, Rus, Byzantines</span></div>
+      <div class="mission-row"><div class="mission-dot"></div><span>Countries like SE or HU</span></div>
+      <div class="mission-row"><div class="mission-dot"></div><span>Event names like Weekly Cup</span></div>
+    </article>
+  </aside>
+</section>
+{% endblock %}

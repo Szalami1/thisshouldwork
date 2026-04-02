@@ -1,0 +1,216 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}{{ player.display_name }} • Aoe4IT{% endblock %}
+{% block content %}
+{% set win_rate = ((stats.wins / stats.played) * 100) if stats.played else 0 %}
+<section class="card premium-player-hero">
+  <div class="premium-player-head">
+    <div class="premium-player-identity">
+      <div class="profile-avatar big premium-player-avatar">{{ player.display_name[0]|upper }}</div>
+      <div>
+        <div class="hero-kicker">Player dossier</div>
+        <h1 class="premium-player-title">{{ player.display_name }}</h1>
+        <p class="premium-player-copy">
+          {{ player.main_civ or 'No main civ set yet' }} • Rating {{ player.rating }} • Trust {{ player.trust_score }}{% if player.country %} • {{ player.country }}{% endif %}
+        </p>
+        <div class="pill-row top-gap">
+          {% if rank_position %}<span class="pill pill-accent">Rank #{{ rank_position }}</span>{% endif %}
+          <span class="pill">{{ stats.wins }}W {{ stats.losses }}L</span>
+          <span class="pill">{{ win_rate|round(0)|int }}% win rate</span>
+          <span class="pill">{{ tournament_wins }} cup {{ 'win' if tournament_wins == 1 else 'wins' }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="premium-player-actions">
+      {% if current_room %}
+      <a class="small-btn" href="{{ url_for('practice_room_detail', room_id=current_room.id) }}">Open live room</a>
+      {% endif %}
+      {% if has_edit_access %}
+      <a class="small-btn alt" href="#edit-profile">Edit profile</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="premium-player-metrics">
+    <article class="premium-stat-card">
+      <span class="signal-label">Rating</span>
+      <strong>{{ player.rating }}</strong>
+      <small>Current ladder power</small>
+    </article>
+    <article class="premium-stat-card">
+      <span class="signal-label">Record</span>
+      <strong>{{ stats.wins }} / {{ stats.losses }}</strong>
+      <small>All recorded sets</small>
+    </article>
+    <article class="premium-stat-card">
+      <span class="signal-label">Practice</span>
+      <strong>{{ stats.practice_wins }} / {{ stats.practice_played }}</strong>
+      <small>Practice wins and sets</small>
+    </article>
+    <article class="premium-stat-card">
+      <span class="signal-label">Cup registrations</span>
+      <strong>{{ player_tournaments|length }}</strong>
+      <small>Signed weekly events</small>
+    </article>
+  </div>
+</section>
+
+<section class="premium-detail-grid top-gap-xl">
+  <div class="premium-main-stack">
+    <article class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Overview</div>
+          <h3>Competitive snapshot</h3>
+        </div>
+        <span class="pill">Faceit style profile</span>
+      </div>
+      <div class="player-overview-grid">
+        <div class="signal-card">
+          <span class="signal-label">Main civilisation</span>
+          <strong>{{ player.main_civ or 'Unset' }}</strong>
+          <div class="muted">Primary comfort pick on the profile card</div>
+        </div>
+        <div class="signal-card">
+          <span class="signal-label">Country</span>
+          <strong>{{ player.country or 'Not set' }}</strong>
+          <div class="muted">Shown on deeper profile pages</div>
+        </div>
+        <div class="signal-card">
+          <span class="signal-label">Trust score</span>
+          <strong>{{ player.trust_score }}</strong>
+          <div class="muted">Player reliability index</div>
+        </div>
+        <div class="signal-card">
+          <span class="signal-label">Recent form</span>
+          <strong>
+            {% if recent_form %}
+              {% for item in recent_form %}<span class="form-pill form-pill-{{ item.result|lower }}">{{ item.result }}</span>{% endfor %}
+            {% else %}
+              No finished sets yet
+            {% endif %}
+          </strong>
+          <div class="muted">Last {{ recent_form|length }} completed results</div>
+        </div>
+      </div>
+      {% if player.bio %}
+      <div class="premium-copy-box top-gap-xl">
+        <div class="signal-label">Player bio</div>
+        <p>{{ player.bio }}</p>
+      </div>
+      {% else %}
+      <div class="top-gap-xl">{{ empty_panel('No player bio yet', 'This profile has not added a short bio yet. Once it is filled, this box becomes the personal story and scouting summary.', url_for('players'), 'Back to players', secondary_href=url_for('ladder'), secondary_text='Open ladder', compact=True) }}</div>
+      {% endif %}
+    </article>
+
+    {% if has_edit_access %}
+    <article class="card simple-panel" id="edit-profile">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Profile control</div>
+          <h3>Edit player card</h3>
+        </div>
+        <span class="pill">Owner or admin</span>
+      </div>
+      <form method="post" class="form-grid premium-form-grid">{{ csrf_input() }}
+        <label>Country code
+          <input name="country" type="text" placeholder="SE" value="{{ player.country or '' }}">
+        </label>
+        <label>Main civ
+          <select name="main_civ">
+            <option value="">Main civ</option>
+            {% for civ in aoe4_civs %}<option value="{{ civ }}" {% if civ == player.main_civ %}selected{% endif %}>{{ civ }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Trust score
+          <input name="trust_score" type="number" min="0" max="100" value="{{ player.trust_score }}">
+        </label>
+        <label class="full">Bio
+          <textarea name="bio" placeholder="Short profile bio">{{ player.bio or '' }}</textarea>
+        </label>
+        <div class="full action-row compact-actions"><button class="small-btn" type="submit">Save profile</button></div>
+      </form>
+    </article>
+    {% endif %}
+
+    <article class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Timeline</div>
+          <h3>Recent activity</h3>
+        </div>
+        <span class="pill">{{ history|length }} rows</span>
+      </div>
+      {% if history %}
+      <div class="stack-list premium-activity-list">
+        {% for row in history %}
+        {% set is_completed = row.status == 'completed' %}
+        {% set is_win = is_completed and row.winner_id == player.id %}
+        {% set status_label = 'Win' if is_win else ('Loss' if is_completed else row.status|replace('_', ' ')|title) %}
+        <div class="list-row premium-activity-row">
+          <div class="row-main">
+            <div class="premium-activity-topline">{{ row.context_name }}</div>
+            <strong>{{ row.player1_name }} vs {{ row.player2_name }}</strong>
+            <div class="muted">
+              {% if row.score1 is not none and row.score2 is not none %}{{ row.score1 }} {{ '-' }} {{ row.score2 }}{% else %}Awaiting result{% endif %}
+              {% if row.chosen_map %}, {{ row.chosen_map }}{% endif %}
+              {% if row.happened_at %}, {{ row.happened_at[:16] }}{% endif %}
+            </div>
+          </div>
+          <div class="row-side premium-activity-side">
+            <span class="pill {% if is_completed and is_win %}pill-positive{% elif is_completed %}pill-negative{% endif %}">{{ status_label }}</span>
+            {% if row.source_type == 'tournament' %}
+            <a class="small-btn alt" href="{{ url_for('match_detail', match_id=row.source_id) }}">Open</a>
+            {% elif current_user %}
+            <a class="small-btn alt" href="{{ url_for('practice_room_detail', room_id=row.source_id) }}">Open</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      {{ empty_panel('No profile activity yet', 'Once this player starts queueing and joining cups, this feed becomes the profile timeline with results and event context.', url_for('play'), 'Open play', url_for('tournaments'), 'Weekly hub', compact=True) }}
+      {% endif %}
+    </article>
+  </div>
+
+  <aside class="sidebar-stack premium-sidebar-stack">
+    {% if current_room %}
+    <article class="card side-highlight premium-side-card surface-card--sidebar">
+      <div class="card-title">Live room</div>
+      <p><strong>{{ current_room.player1_name }} vs {{ current_room.player2_name }}</strong></p>
+      <div class="muted">Current state: {{ current_room.status|replace('_',' ')|title }}</div>
+      <div class="top-gap"><a class="small-btn" href="{{ url_for('practice_room_detail', room_id=current_room.id) }}">Open room</a></div>
+    </article>
+    {% endif %}
+
+    <article class="card side-highlight premium-side-card surface-card--sidebar">
+      <div class="card-title">Registered cups</div>
+      {% if player_tournaments %}
+      <div class="stack-list compact-gap">
+        {% for row in player_tournaments %}
+        <div class="list-row compact-list-row">
+          <div class="row-main">
+            <strong>{{ row.name }}</strong>
+            <div class="muted">{{ row.starts_at }}</div>
+          </div>
+          <div class="row-side"><span class="pill">{{ row.status|title }}</span></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      {{ empty_panel('No weekly registrations yet', 'As soon as this player joins a cup, the registration shelf fills with event history and current status.', url_for('tournaments'), 'Open tournaments', compact=True) }}
+      {% endif %}
+    </article>
+
+    <article class="card side-highlight premium-side-card surface-card--sidebar">
+      <div class="card-title">Profile pulse</div>
+      <div class="settings-kv-grid">
+        <div class="signal-card"><span class="signal-label">Peak identity</span><strong>{{ player.main_civ or 'Open pool' }}</strong></div>
+        <div class="signal-card"><span class="signal-label">Reliability</span><strong>{{ player.trust_score }}/100</strong></div>
+        <div class="signal-card"><span class="signal-label">Country</span><strong>{{ player.country or 'Unset' }}</strong></div>
+        <div class="signal-card"><span class="signal-label">Site rank</span><strong>{% if rank_position %}#{{ rank_position }}{% else %}Unranked{% endif %}</strong></div>
+      </div>
+    </article>
+  </aside>
+</section>
+{% endblock %}

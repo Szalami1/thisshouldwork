@@ -38,6 +38,7 @@ SMTP_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
 MAIL_FROM = os.environ.get('MAIL_FROM', SMTP_USERNAME or 'no-reply@aoe4it.local').strip()
 RESET_TOKEN_MAX_AGE = int(os.environ.get('RESET_TOKEN_MAX_AGE', '3600'))
 
+
 def _can_use_directory(path: Path) -> bool:
     try:
         path.mkdir(parents=True, exist_ok=True)
@@ -78,6 +79,33 @@ def resolve_db_path() -> Path:
         )
 
     return BASE_DIR / 'aoe4it.db'
+
+
+def _resolve_project_dir(name: str) -> Path:
+    configured = os.environ.get(f'{name.upper()}_DIR', '').strip()
+    candidates: list[Path] = []
+    if configured:
+        candidates.append(Path(configured))
+
+    cwd = Path.cwd()
+    candidates.extend([
+        BASE_DIR / name,
+        cwd / name,
+        BASE_DIR.parent / name,
+        cwd.parent / name,
+    ])
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate.resolve(strict=False))
+        if key in seen:
+            continue
+        seen.add(key)
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+
+    return BASE_DIR / name
+
 
 DB_PATH = resolve_db_path()
 DATABASE_PROVIDER = 'sqlite'
@@ -122,13 +150,20 @@ CIV_FLAG_FILES = {
     "Zhu Xi's Legacy": 'Zhu_Xis_Legacy_AoE4.webp',
 }
 
-TEMPLATES_DIR = BASE_DIR / 'templates'
-STATIC_DIR = BASE_DIR / 'static'
+TEMPLATES_DIR = _resolve_project_dir('templates')
+STATIC_DIR = _resolve_project_dir('static')
 
-if not TEMPLATES_DIR.exists() or not STATIC_DIR.exists():
-    raise RuntimeError(
-        'Project files are missing. Do not run app.py directly from inside the ZIP preview. '
-        'Extract the full archive first, then run the app from the extracted folder so templates/ and static/ are available.'
+if not TEMPLATES_DIR.exists():
+    print(
+        'Warning: templates directory was not found at startup. '
+        'Set TEMPLATES_DIR if your deployment uses a non-standard layout.',
+        flush=True,
+    )
+if not STATIC_DIR.exists():
+    print(
+        'Warning: static directory was not found at startup. '
+        'Set STATIC_DIR if your deployment uses a non-standard layout.',
+        flush=True,
     )
 
 app = Flask(__name__, template_folder=str(TEMPLATES_DIR), static_folder=str(STATIC_DIR))
@@ -208,7 +243,7 @@ def runtime_config_summary() -> dict:
     elif not DB_PATH.exists():
         warnings.append('Database file does not exist yet. It will be created on first successful startup.')
     if IS_RENDER and not os.environ.get('RENDER_DISK_PATH') and not os.environ.get('DATABASE_PATH'):
-        warnings.append('Render disk path is not explicitly set. The app will use the first writable location from /var/data, the project .render_data folder, or /tmp.')
+        warnings.append('Render disk path is not explicitly set. The app will fall back to /var/data.')
 
     return {
         'app_env': APP_ENV,

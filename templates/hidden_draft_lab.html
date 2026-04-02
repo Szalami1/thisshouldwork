@@ -1,0 +1,121 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Hidden Draft Lab | Aoe4IT{% endblock %}
+{% block body_class %}client-body{% endblock %}
+{% block content %}
+<section class="card premium-shadow-hero">
+  <div class="premium-player-head">
+    <div>
+      <div class="hero-kicker">Private testing</div>
+      <h1 class="premium-player-title">Shadow Draft Lab</h1>
+      <p class="premium-player-copy">Premium sandbox for map drafts, hidden civ picks, secret snipes, and rematch testing without touching the live queue or weekly cups.</p>
+    </div>
+    <div class="pill-row top-gap">
+      <span class="pill pill-accent">Direct URL only</span>
+      <span class="pill">{{ hidden_rooms|length }} recent rooms</span>
+      <span class="pill">{{ players|length }} stored lab players</span>
+    </div>
+  </div>
+  <div class="premium-player-metrics">
+    <article class="premium-stat-card"><span class="signal-label">Flow</span><strong>Map to bans to picks to snipe</strong><small>Full draft chain inside one room</small></article>
+    <article class="premium-stat-card"><span class="signal-label">Isolation</span><strong>Hidden only</strong><small>No public queue impact</small></article>
+    <article class="premium-stat-card"><span class="signal-label">Speed tools</span><strong>Reset, swap, rematch</strong><small>Fast iteration inside the lab</small></article>
+    <article class="premium-stat-card"><span class="signal-label">Starter mode</span><strong>Manual or random</strong><small>Choose who opens the room</small></article>
+  </div>
+</section>
+
+<section class="premium-detail-grid top-gap-xl premium-event-grid">
+  <div class="premium-main-stack">
+    <section class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Room setup</div>
+          <h3>Create hidden draft room</h3>
+        </div>
+        <span class="pill">Shadow queue</span>
+      </div>
+      {% if players|length < 2 %}
+      <div class="empty-state">Create at least two stored players first, then come back here to open a hidden draft room.</div>
+      {% else %}
+      <form method="post" class="form-grid premium-form-grid">{{ csrf_input() }}
+        <label>Player one
+          <select name="player1_id" required>
+            <option value="">Select player</option>
+            {% for player in players %}
+            <option value="{{ player.id }}" {% if defaults.alpha == player.id %}selected{% endif %}>{{ player.display_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Player two
+          <select name="player2_id" required>
+            <option value="">Select player</option>
+            {% for player in players %}
+            <option value="{{ player.id }}" {% if defaults.beta == player.id %}selected{% endif %}>{{ player.display_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Series
+          <select name="best_of">
+            <option value="1">BO1</option>
+            <option value="3">BO3</option>
+          </select>
+        </label>
+        <label class="checkbox-line full"><input type="checkbox" name="random_starter" value="1"> Random first picker</label>
+        <div class="full action-row compact-actions"><button class="small-btn" type="submit">Create hidden lab room</button></div>
+      </form>
+      {% endif %}
+    </section>
+
+    <section class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Lab history</div>
+          <h3>Recent hidden rooms</h3>
+        </div>
+        <span class="pill">{{ hidden_rooms|length }} stored</span>
+      </div>
+      {% if hidden_rooms %}
+      <div class="stack-list premium-activity-list">
+        {% for room in hidden_rooms %}
+        <div class="list-row premium-activity-row">
+          <div class="row-main">
+            <div class="premium-activity-topline">Room {{ room.id }}</div>
+            <strong>{{ room.player1_name }} vs {{ room.player2_name }}</strong>
+            <div class="muted">{{ 'BO3' if room.best_of == 3 else 'BO1' }}, {{ room.status|replace('_', ' ')|title }}, {{ room.updated_at }}</div>
+          </div>
+          <div class="row-side premium-activity-side">
+            <span class="pill">{{ room.chosen_map or 'Draft in progress' }}</span>
+            <a class="small-btn alt" href="{{ url_for('hidden_draft_room', room_id=room.id) }}">Open room</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">No hidden lab rooms yet.</div>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="sidebar-stack premium-sidebar-stack">
+    <section class="card side-highlight premium-side-card">
+      <div class="card-title">Lab notes</div>
+      <div class="settings-kv-grid">
+        <div class="signal-card"><span class="signal-label">Map phase</span><strong>Ban or pick pool</strong></div>
+        <div class="signal-card"><span class="signal-label">Civ phase</span><strong>6 bans, 4 hidden picks</strong></div>
+        <div class="signal-card"><span class="signal-label">Reveal</span><strong>Double secret snipe</strong></div>
+        <div class="signal-card"><span class="signal-label">Reset tools</span><strong>Safe sandbox controls</strong></div>
+      </div>
+    </section>
+
+    <section class="card side-highlight premium-side-card">
+      <div class="card-title">Default testers</div>
+      <div class="stack-list compact-gap">
+        {% for player in players[:4] %}
+        <div class="list-row compact-list-row">
+          <div class="row-main"><strong>{{ player.display_name }}</strong><div class="muted">Rating {{ player.rating }}</div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </aside>
+</section>
+{% endblock %}

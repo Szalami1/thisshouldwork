@@ -1,0 +1,37 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Settings | Aoe4IT{% endblock %}
+{% block body_class %}client-body{% endblock %}
+{% block content %}
+<div class="subpage-band"><div class="subpage-band-inner"><div class="subpage-band-eyebrow">Account control</div><h1 class="subpage-band-title">Settings</h1></div></div>
+
+<div class="content-grid" style="grid-template-columns: 1.1fr .9fr; align-items:start;">
+  <section class="card simple-panel">
+    <div class="section-head"><h3>Account</h3><span class="muted">Profile and access</span></div>
+    <div class="settings-kv-grid">
+      <div class="signal-card"><span class="signal-label">Username</span><strong>{{ current_user.username }}</strong></div>
+      <div class="signal-card"><span class="signal-label">Email</span><strong>{{ current_user.email }}</strong></div>
+      <div class="signal-card"><span class="signal-label">Admin access</span><strong>{{ 'Enabled' if admin_mode else 'Standard' }}</strong></div>
+      <div class="signal-card"><span class="signal-label">Player link</span><strong>{% if current_player %}{{ current_player.display_name }}{% else %}No player yet{% endif %}</strong></div>
+    </div>
+  </section>
+
+  <section class="card simple-panel">
+    <div class="section-head"><h3>Security</h3><span class="muted">Recovery and sign in</span></div>
+    <div class="stack-list">
+      <div class="list-row"><div class="row-main"><strong>Password reset</strong><div class="muted">Use email recovery if you lose access.</div></div><div class="row-side"><a class="small-btn alt" href="{{ url_for('forgot_password') }}">Recovery</a></div></div>
+      <div class="list-row"><div class="row-main"><strong>Session</strong><div class="muted">Current account is active on this browser.</div></div><div class="row-side"><form method="post" action="{{ url_for('logout') }}">{{ csrf_input() }}<button class="small-btn" type="submit">Log out</button></form></div></div>
+    </div>
+  </section>
+</div>
+
+{% if admin_mode %}
+<section class="card simple-panel danger-panel top-gap-xl">
+  <div class="section-head"><h3>Admin utilities</h3><span class="muted">Use carefully</span></div>
+  <p class="muted">Local reset clears accounts, players, queue state, rooms, tournaments, and reports.</p>
+  <form method="post">{{ csrf_input() }}
+    <input type="hidden" name="action" value="reset_demo">
+    <button class="small-btn" type="submit">Reset database</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

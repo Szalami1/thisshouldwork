@@ -1,0 +1,267 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}Aoe4IT Players{% endblock %}
+{% block content %}
+<section class="hero hero-players compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/header_market.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Scout talent</div>
+    <h1>Players</h1>
+    <p>Search active competitors, track win rate, and find the people driving the current ladder.</p>
+  </div>
+</section>
+
+<section class="tab-strip slim">
+  <a class="subtab {% if active_tab == 'players' %}active{% endif %}" href="{{ url_for('players', tab='players', q=search, region=region, civ=civ_filter) }}">Top Players</a>
+  <a class="subtab {% if active_tab == 'teams' %}active{% endif %}" href="{{ url_for('players', tab='teams', q=search, region=region, civ=civ_filter) }}">Pro Teams</a>
+  <a class="subtab {% if active_tab == 'streamers' %}active{% endif %}" href="{{ url_for('players', tab='streamers', q=search, region=region, civ=civ_filter) }}">Streamers</a>
+  <a class="subtab {% if active_tab == 'friends' %}active{% endif %}" href="{{ url_for('players', tab='friends', q=search, region=region, civ=civ_filter) }}">Friends</a>
+</section>
+
+{% if active_tab == 'players' %}
+<section class="players-hero-grid top-gap-sm">
+  <article class="card feature-card hero-player-card span-2 surface-card--accent">
+    <div class="section-head tight-head">
+      <div>
+        <div class="hero-kicker">Featured competitor</div>
+        <h3>Player of the month</h3>
+      </div>
+      {% if ladder_rows %}<span class="pill">#1 spotlight</span>{% endif %}
+    </div>
+    {% if ladder_rows %}
+      {% set champion = ladder_rows[0] %}
+      {% set champion_stats = champion.stats %}
+      {% set champion_winrate = ((champion_stats.wins / champion_stats.played * 100) if champion_stats.played else 0)|round(0)|int %}
+      <div class="hero-player-layout">
+        <div class="hero-player-visual spotlight-helmet" style="background-image:url('{{ url_for('static', filename='art/knight_helmet_feature_v20.png') }}'); background-size:contain; background-repeat:no-repeat; background-position:center; background-color:rgba(10,13,19,.88);"></div>
+        <div class="hero-player-copy">
+          <h2>{{ champion.player.display_name }}</h2>
+          <p class="muted">{{ champion.player.main_civ or 'Open civ pool' }}{% if champion.player.country %} • {{ champion.player.country }}{% endif %}</p>
+          <div class="feature-stat-row">
+            <div class="feature-stat"><span>Rating</span><strong>{{ champion.player.rating }}</strong></div>
+            <div class="feature-stat"><span>Win rate</span><strong>{{ champion_winrate }}%</strong></div>
+            <div class="feature-stat"><span>Matches</span><strong>{{ champion_stats.played }}</strong></div>
+            <div class="feature-stat"><span>Trust</span><strong>{{ champion.player.trust_score }}</strong></div>
+          </div>
+          <div class="hero-actions left-actions top-gap-sm">
+            <a class="small-btn" href="{{ url_for('player_detail', player_id=champion.player.id) }}">Open profile</a>
+            <a class="small-btn alt" href="{{ url_for('ladder') }}">Open ladder</a>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      {{ empty_panel('No featured player yet', 'Once profiles and results start flowing in, this block becomes the main player spotlight instead of a tiny side card.', url_for('register_account') if not current_user else url_for('players'), 'Create profile', url_for('ladder'), 'Open ladder') }}
+    {% endif %}
+  </article>
+
+  <article class="card scout-summary-card surface-card--sidebar">
+    <div class="card-title">Scout Board</div>
+    <div class="stack-list compact-gap">
+      <div class="list-row compact-list-row">
+        <div class="row-main"><strong>Visible profiles</strong><div class="muted">Ready for scouting and direct profile visits</div></div>
+        <div class="row-side"><span class="pill">{{ ladder_rows|length }}</span></div>
+      </div>
+      <div class="list-row compact-list-row">
+        <div class="row-main"><strong>Regions in filter</strong><div class="muted">Use country and civ filters to narrow the board</div></div>
+        <div class="row-side"><span class="pill">{{ region }}</span></div>
+      </div>
+      <div class="list-row compact-list-row">
+        <div class="row-main"><strong>Main civ scan</strong><div class="muted">Follow who is leading with specialist picks</div></div>
+        <div class="row-side"><span class="pill">{{ civ_filter or 'All' }}</span></div>
+      </div>
+    </div>
+  </article>
+</section>
+{% endif %}
+
+<section class="players-layout top-gap-md">
+  <div>
+    <form class="filter-row" method="get" action="{{ url_for('players') }}">
+      <input type="hidden" name="tab" value="{{ active_tab }}" />
+      <input id="playerSearch" name="q" type="text" placeholder="Search players..." value="{{ search }}" />
+      <select name="region">
+        <option value="GLOBAL" {% if region == 'GLOBAL' %}selected{% endif %}>Region: Global</option>
+        <option value="SE" {% if region == 'SE' %}selected{% endif %}>Region: Sweden</option>
+        <option value="HU" {% if region == 'HU' %}selected{% endif %}>Region: Hungary</option>
+        <option value="DE" {% if region == 'DE' %}selected{% endif %}>Region: Germany</option>
+      </select>
+      <select name="civ">
+        <option value="" {% if not civ_filter %}selected{% endif %}>Faction: All</option>
+        {% for civ in aoe4_civs %}
+        <option value="{{ civ }}" {% if civ_filter == civ %}selected{% endif %}>{{ civ }}</option>
+        {% endfor %}
+      </select>
+      <button class="small-btn alt" type="submit">Apply Filter</button>
+    </form>
+
+    {% if active_tab == 'players' %}
+    <div class="player-discovery-grid top-gap-md">
+      <article class="card spotlight-list-card surface-card--soft">
+        <div class="card-title">Rising Players</div>
+        <div class="stack-list compact-gap">
+          {% for row in ladder_rows[1:5] %}
+          <a class="list-row compact-list-row card-link" href="{{ url_for('player_detail', player_id=row.player.id) }}">
+            <div class="row-main">
+              <strong>{{ row.player.display_name }}</strong>
+              <div class="muted">{{ row.player.main_civ or 'Open pool' }}</div>
+            </div>
+            <div class="row-side"><span class="pill">{{ row.player.rating }}</span></div>
+          </a>
+          {% else %}
+          {{ empty_panel('Rising shelf is waiting', 'As more players join, this block becomes the scouting shelf for new names moving up the site.', url_for('register_account') if not current_user else url_for('play'), 'Start climbing', url_for('ladder'), 'View ladder', compact=True) }}
+          {% endfor %}
+        </div>
+      </article>
+      <article class="card spotlight-list-card surface-card--soft">
+        <div class="card-title">Most Active</div>
+        <div class="stack-list compact-gap">
+          {% for row in most_active_rows %}
+          <div class="list-row compact-list-row">
+            <div class="row-main">
+              <strong>{{ row.player.display_name }}</strong>
+              <div class="muted">{{ row.stats.played }} finished set{% if row.stats.played != 1 %}s{% endif %}</div>
+            </div>
+            <div class="row-side"><a class="small-btn alt" href="{{ url_for('player_detail', player_id=row.player.id) }}">Profile</a></div>
+          </div>
+          {% else %}
+          {{ empty_panel('Activity shelf is empty', 'Finished rooms will surface here once more players complete sets and build a visible match volume.', url_for('play'), 'Open queue', url_for('tournaments'), 'Open weekly', compact=True) }}
+          {% endfor %}
+        </div>
+      </article>
+    </div>
+
+    {% if ladder_rows %}<div class="table-wrap top-gap-md rich-table-wrap">
+      <table>
+        <thead>
+          <tr><th>Rank</th><th>Player</th><th>Main Civ</th><th>Country</th><th>Win Rate</th><th>Record</th><th>Profile</th></tr>
+        </thead>
+        <tbody>
+          {% for row in ladder_rows %}
+          {% set stats = row.stats %}
+          {% set winrate = ((stats.wins / stats.played * 100) if stats.played else 0)|round(0)|int %}
+          <tr>
+            <td><span class="rank-pill">{{ row.rank }}</span></td>
+            <td>
+              <div class="table-player-block">
+                <div class="avatar-sm" style="background-image:url('{{ url_for('static', filename='flags/' ~ civ_flags[row.player.main_civ]) if row.player.main_civ and civ_flags.get(row.player.main_civ) else url_for('static', filename='art/default_avatar.svg') }}')"></div>
+                <div>
+                  <a class="table-player-link" href="{{ url_for('player_detail', player_id=row.player.id) }}">{{ row.player.display_name }}</a>
+                  <div class="muted">Rating {{ row.player.rating }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ row.player.main_civ or 'Open pool' }}</td>
+            <td>{{ row.player.country or 'Global' }}</td>
+            <td>{{ winrate }}%</td>
+            <td>{{ stats.wins }}W / {{ stats.losses }}L</td>
+            <td><a class="small-btn alt" href="{{ url_for('player_detail', player_id=row.player.id) }}">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>{% else %}
+    <div class="table-empty-wrap">{{ empty_panel('No players discovered yet', 'Create the first visible profile and this page turns into the live scouting board for the platform.', url_for('register_account') if not current_user else url_for('players'), 'Create profile', url_for('play'), 'Open play') }}</div>{% endif %}
+    {% elif active_tab == 'teams' %}
+    <div class="tournament-grid">
+      {% for team in featured_teams %}
+      <article class="card tournament-panel">
+        <div class="card-title">{{ team.name }}</div>
+        <p class="muted">Average rating {{ team.avg_rating }}</p>
+        <div class="stack-list compact-gap">
+          {% for member in team.players %}
+          <div class="list-row compact-list-row">
+            <div class="row-main">
+              <strong>{{ member.display_name }}</strong>
+              <div class="muted">{{ member.main_civ or 'Open pool' }}</div>
+            </div>
+            <div class="row-side"><span class="pill">{{ member.rating }}</span></div>
+          </div>
+          {% endfor %}
+        </div>
+        <a class="small-btn alt" href="{{ url_for('player_detail', player_id=team.players[0].id) }}">Open captain profile</a>
+      </article>
+      {% else %}
+      <article class="card tournament-panel wide"><div class="card-title">Teams</div><p class="muted">Team showcase unlocks once player profiles exist.</p></article>
+      {% endfor %}
+    </div>
+    {% elif active_tab == 'streamers' %}
+    <div class="streamer-grid streamer-grid-wide">
+      {% for row in streamer_rows %}
+      <a class="streamer card-link" href="{{ url_for('player_detail', player_id=row.player.id) }}">
+        <div class="portrait-square" style="background-image:url('{{ url_for('static', filename='flags/' ~ civ_flags[row.player.main_civ]) if row.player.main_civ and civ_flags.get(row.player.main_civ) else url_for('static', filename='art/default_avatar.svg') }}'); background-size:cover; background-position:center;"></div>
+        <h4>{{ row.player.display_name }}</h4>
+        <div class="muted">{{ row.player.main_civ or 'Open civ' }}</div>
+      </a>
+      {% else %}
+      {{ empty_panel('No streamer profiles yet', 'As soon as profiles begin to represent creators and casters, this panel becomes the live streamer shelf.', url_for('players'), 'Back to players', url_for('news'), 'Open news', compact=True) }}
+      {% endfor %}
+    </div>
+    {% else %}
+      {% if current_player %}
+      <article class="card simple-panel">
+        <div class="section-head"><div><div class="hero-kicker">Practice network</div><h3>Recent opponents</h3></div><span class="pill">{{ friend_rows|length }} rivals</span></div>
+        {% if friend_rows %}
+        <div class="stack-list">
+          {% for row in friend_rows %}
+          <div class="list-row">
+            <div class="row-main">
+              <strong>{{ row.player.display_name }}</strong>
+              <div class="muted">Seen in {{ row.context_name }}{% if row.happened_at %}, {{ row.happened_at[:16] }}{% endif %}</div>
+            </div>
+            <div class="row-side"><a class="small-btn alt" href="{{ url_for('player_detail', player_id=row.player.id) }}">Open profile</a></div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        {{ empty_panel('No recent rivals yet', 'Play a few sets and this tab turns into your recent opponent network with fast profile routes.', url_for('play'), 'Play now', url_for('players'), 'Browse players', compact=True) }}
+        {% endif %}
+      </article>
+      {% else %}
+      <article class="card simple-panel">
+        <div class="section-head"><div><div class="hero-kicker">Friends tab</div><h3>Unlock personal connections</h3></div></div>
+        {{ empty_panel('Connections are locked', 'Create your account and player profile to start tracking recent opponents and practice contacts.', url_for('register_account'), 'Create account', url_for('login'), 'Log in', compact=True) }}
+        <div class="top-gap"><a class="small-btn" href="{{ url_for('register_account') }}">Create account</a></div>
+      </article>
+      {% endif %}
+    {% endif %}
+
+    {% if current_user and not current_player %}
+    <article class="card top-gap-md">
+      <div class="card-title">Create Player</div>
+      <form method="post" class="profile-form-grid">{{ csrf_input() }}
+        <input name="display_name" type="text" placeholder="Display name" required>
+        <input name="country" type="text" placeholder="Country code">
+        <select name="main_civ">
+          <option value="">Main civ</option>
+          {% for civ in aoe4_civs %}<option value="{{ civ }}">{{ civ }}</option>{% endfor %}
+        </select>
+        <textarea name="bio" placeholder="Short profile bio"></textarea>
+        <button class="small-btn" type="submit">Create Profile</button>
+      </form>
+    </article>
+    {% endif %}
+  </div>
+
+  <aside class="sidebar-stack">
+    <article class="card side-highlight">
+      <div class="card-title">Quick Links</div>
+      {% for row in ladder_rows[:3] %}
+      <div class="teammate-row">
+        <div class="teammate-left"><div class="avatar-sm" style="background-image:url('{{ url_for('static', filename='flags/' ~ civ_flags[row.player.main_civ]) if row.player.main_civ and civ_flags.get(row.player.main_civ) else url_for('static', filename='art/default_avatar.svg') }}')"></div><div><strong>{{ row.player.display_name }}</strong><div class="muted">{{ row.player.main_civ or 'Open profile' }}</div></div></div>
+        <a class="small-btn alt" href="{{ url_for('player_detail', player_id=row.player.id) }}">Profile</a>
+      </div>
+      {% else %}
+      {{ empty_panel('No quick links yet', 'Once profiles exist, this sidebar becomes a faster route into featured competitors and rivals.', url_for('players'), 'Refresh board', url_for('register_account') if not current_user else url_for('players'), 'Create profile', compact=True) }}
+      {% endfor %}
+    </article>
+    <article class="card side-highlight">
+      <div class="card-title">Discovery Notes</div>
+      <div class="stack-list compact-gap">
+        <div class="list-row compact-list-row"><div class="row-main"><strong>Use the civ filter</strong><div class="muted">Great for checking who is driving specific strategies right now.</div></div></div>
+        <div class="list-row compact-list-row"><div class="row-main"><strong>Open profile pages</strong><div class="muted">Player detail pages carry record, activity, tournament entries, and form.</div></div></div>
+        <div class="list-row compact-list-row"><div class="row-main"><strong>Build rival lists</strong><div class="muted">The friends tab turns into recent opponents after your first sets.</div></div></div>
+      </div>
+    </article>
+  </aside>
+</section>
+{% endblock %}

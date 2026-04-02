@@ -1,0 +1,151 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}{{ tournament.name }} • Aoe4IT{% endblock %}
+{% block content %}
+<section class="hero hero-weekly compact hero-with-art premium-tournament-hero" style="background-image:url('{{ url_for('static', filename='art/del_splash_4k.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Weekly event hub</div>
+    <h1>{{ tournament.name }}</h1>
+    <p>
+      {{ tournament.starts_at }}, {{ tournament.status|title }}
+      {% if tournament.winner_name %}, winner {{ tournament.winner_name }}{% endif %}
+      {% if total_matches %}, {{ completion_pct }}% bracket complete{% endif %}
+    </p>
+    <div class="hero-actions">
+      {% if current_player and not is_registered and tournament.status == 'open' %}
+      <form method="post" action="{{ url_for('register_tournament', tournament_id=tournament.id) }}">{{ csrf_input() }}<button class="cta-primary" type="submit">Join tournament</button></form>
+      {% elif current_player and is_registered and tournament.status == 'open' %}
+      <form method="post" action="{{ url_for('withdraw_tournament', tournament_id=tournament.id) }}">{{ csrf_input() }}<button class="cta-secondary" type="submit">Withdraw</button></form>
+      {% endif %}
+      {% if admin_mode and tournament.status == 'open' %}
+      <form method="post" action="{{ url_for('start_tournament', tournament_id=tournament.id) }}">{{ csrf_input() }}<button class="cta-secondary" type="submit">Start bracket</button></form>
+      {% endif %}
+      {% if next_match %}
+      <a class="cta-secondary" href="{{ url_for('match_detail', match_id=next_match.id) }}">Open next match</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="premium-tournament-stats">
+  <article class="premium-stat-card"><span class="signal-label">Registrations</span><strong>{{ summary.registered }}</strong><small>Filled slots in this event</small></article>
+  <article class="premium-stat-card"><span class="signal-label">Bracket target</span><strong>{{ slot_target }}</strong><small>Projected bracket size</small></article>
+  <article class="premium-stat-card"><span class="signal-label">Live matches</span><strong>{{ summary.live_matches }}</strong><small>Currently active sets</small></article>
+  <article class="premium-stat-card"><span class="signal-label">Completed</span><strong>{{ summary.completed_matches }}</strong><small>Finished bracket sets</small></article>
+</section>
+
+<section class="premium-detail-grid top-gap-xl premium-event-grid">
+  <div class="premium-main-stack">
+    <article class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Event desk</div>
+          <h3>Tournament overview</h3>
+        </div>
+        <span class="pill">{{ tournament.status|title }}</span>
+      </div>
+      <div class="player-overview-grid">
+        <div class="signal-card"><span class="signal-label">Signups</span><strong>{{ summary.registered }}</strong><div class="muted">Players already inside the field</div></div>
+        <div class="signal-card"><span class="signal-label">Pending sets</span><strong>{{ summary.pending_matches }}</strong><div class="muted">Matches still waiting to resolve</div></div>
+        <div class="signal-card"><span class="signal-label">Rounds</span><strong>{{ round_total or 'Not generated' }}</strong><div class="muted">Bracket depth after generation</div></div>
+        <div class="signal-card"><span class="signal-label">Champion</span><strong>{{ tournament.winner_name or 'Still open' }}</strong><div class="muted">Winner banner once finals close</div></div>
+      </div>
+      {% if next_match %}
+      <div class="premium-copy-box top-gap-xl">
+        <div class="signal-label">Next focus match</div>
+        <p><strong>{{ next_match.player1_name or 'TBD' }} vs {{ next_match.player2_name or 'TBD' }}</strong>, {{ next_match.round_label }}, BO{{ next_match.best_of }}, {{ next_match.status|replace('_',' ')|title }}.</p>
+      </div>
+      {% elif not groups %}
+      <div class="top-gap-xl">{{ empty_panel('Bracket is not generated yet', 'Once the event is started, this page fills with full tournament lanes, match status, and direct report routes.', url_for('tournaments'), 'Back to weekly hub', compact=True) }}</div>
+      {% endif %}
+    </article>
+
+    <article class="card simple-panel">
+      <div class="section-head">
+        <div>
+          <div class="hero-kicker">Bracket view</div>
+          <h3>Match lanes</h3>
+        </div>
+        <span class="pill">{{ total_matches }} match{{ '' if total_matches == 1 else 'es' }}</span>
+      </div>
+      {% if groups %}
+      <div class="premium-bracket-stack">
+        {% for group in groups %}
+        <section class="premium-round-group">
+          <div class="premium-round-head">
+            <div>
+              <div class="signal-label">Round {{ loop.index }}</div>
+              <h4>{{ group.label }}</h4>
+            </div>
+            <span class="pill">{{ group.matches|length }} match{{ '' if group.matches|length == 1 else 'es' }}</span>
+          </div>
+          <div class="stack-list">
+            {% for match in group.matches %}
+            <div class="list-row premium-match-row">
+              <div class="row-main">
+                <div class="premium-activity-topline">BO{{ match.best_of }} · {{ match.status|replace('_',' ')|title }}</div>
+                <strong>{{ match.player1_name or 'TBD' }} vs {{ match.player2_name or 'TBD' }}</strong>
+                <div class="muted">
+                  {% if match.score1 is not none and match.score2 is not none %}{{ match.score1 }} {{ '-' }} {{ match.score2 }}{% else %}Waiting for score{% endif %}
+                  {% if match.winner_name %}, winner {{ match.winner_name }}{% endif %}
+                  {% if match.provisional_winner_name and not match.winner_name %}, provisional {{ match.provisional_winner_name }}{% endif %}
+                </div>
+              </div>
+              <div class="row-side premium-activity-side">
+                <span class="pill {% if match.status == 'completed' %}pill-positive{% elif match.status == 'provisional' %}pill-negative{% endif %}">{{ match.status|replace('_',' ')|title }}</span>
+                <a class="small-btn alt" href="{{ url_for('match_detail', match_id=match.id) }}">Open</a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+      {% else %}
+      {{ empty_panel('No bracket exists yet', 'This event page is ready for a FACEIT style bracket as soon as the admin starts the tournament.', url_for('tournaments'), 'Open weekly hub', compact=True) }}
+      {% endif %}
+    </article>
+  </div>
+
+  <aside class="sidebar-stack premium-sidebar-stack">
+    <article class="card side-highlight premium-side-card surface-card--sidebar">
+      <div class="card-title">Field status</div>
+      <div class="settings-kv-grid">
+        <div class="signal-card"><span class="signal-label">Fill</span><strong>{{ summary.registered }}/{{ slot_target }}</strong></div>
+        <div class="signal-card"><span class="signal-label">Progress</span><strong>{{ completion_pct }}%</strong></div>
+        <div class="signal-card"><span class="signal-label">State</span><strong>{{ tournament.status|title }}</strong></div>
+        <div class="signal-card"><span class="signal-label">Live sets</span><strong>{{ summary.live_matches }}</strong></div>
+      </div>
+    </article>
+
+    <article class="card side-highlight premium-side-card surface-card--sidebar">
+      <div class="card-title">Registrations</div>
+      {% if registrations %}
+      <div class="stack-list compact-gap premium-registration-list">
+        {% for player in registrations %}
+        <div class="list-row compact-list-row">
+          <div class="row-main">
+            <div class="premium-activity-topline">Seed {{ player.seed or loop.index }}</div>
+            <strong>{{ player.display_name }}</strong>
+            <div class="muted">Rating {{ player.rating }}</div>
+          </div>
+          <div class="row-side"><span class="pill">{{ player.main_civ or 'Open civ' }}</span></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      {{ empty_panel('No registrations yet', 'The event is live and ready for players. The moment someone joins, the field status rail begins to fill.', url_for('players'), 'Browse players', url_for('play'), 'Open play', compact=True) }}
+      {% endif %}
+    </article>
+
+    {% if tournament.winner_name %}
+    <article class="card side-highlight premium-side-card surface-card--sidebar">
+      <div class="card-title">Champion banner</div>
+      <p><strong>{{ tournament.winner_name }}</strong></p>
+      <div class="muted">This event has already crowned its winner.</div>
+    </article>
+    {% endif %}
+  </aside>
+</section>
+{% endblock %}

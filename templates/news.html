@@ -1,0 +1,97 @@
+{% extends 'faceit_base.html' %}
+{% block title %}Aoe4IT News{% endblock %}
+{% block content %}
+<section class="hero hero-news compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/header_market.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Platform updates</div>
+    <h1>News</h1>
+    <p>Patch notes, tournament announcements, guide drops, and product updates collected in one editorial hub.</p>
+  </div>
+</section>
+
+<section class="news-layout">
+  <div class="news-main-stack">
+    <article class="card news-feature-card">
+      <div class="section-head tight-head">
+        <div>
+          <div class="hero-kicker">Featured story</div>
+          <h3>Spring season recap sets the tone for the next competitive cycle</h3>
+        </div>
+        <span class="pill">Events</span>
+      </div>
+      <div class="news-feature-grid">
+        <div class="news-feature-art" style="background-image:url('{{ url_for('static', filename='art/del_splash_mobile.webp') }}'); background-size:cover; background-position:center;"></div>
+        <div class="news-feature-copy">
+          <p>The spring cycle is now centered around weekly cups, faster queue routing, and stronger player scouting. This hub tracks tournament updates, balance-focused guides, and platform changes in one cleaner editorial feed.</p>
+          <div class="feature-stat-row">
+            <div class="feature-stat"><span>Category</span><strong>Platform</strong></div>
+            <div class="feature-stat"><span>Updated</span><strong>Today</strong></div>
+            <div class="feature-stat"><span>Focus</span><strong>Weekly cups</strong></div>
+          </div>
+          <div class="hero-actions left-actions top-gap-sm">
+            <a class="small-btn" href="{{ url_for('tournaments') }}">Open tournaments</a>
+            <a class="small-btn alt" href="{{ url_for('play') }}">Open play</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <div class="news-card-grid top-gap-md">
+      <article class="card editorial-card">
+        <span class="story-tag">Patch</span>
+        <h4>Queue tuning update</h4>
+        <p class="muted">Queue pressure, draft flow, and room status updates now feel sharper across the platform.</p>
+        <div class="editorial-meta"><span>2 hours ago</span><span>Queue</span></div>
+      </article>
+      <article class="card editorial-card">
+        <span class="story-tag">Guides</span>
+        <h4>New strategy guides available</h4>
+        <p class="muted">Fresh learning pages for English, Rus, Byzantines, and Holy Roman Empire.</p>
+        <div class="editorial-meta"><span>Yesterday</span><span>Learning</span></div>
+      </article>
+      <article class="card editorial-card">
+        <span class="story-tag">Events</span>
+        <h4>Weekly cup tools are live</h4>
+        <p class="muted">Registration, bracket generation, and match detail pages are now connected.</p>
+        <div class="editorial-meta"><span>This week</span><span>Tournaments</span></div>
+      </article>
+      <article class="card editorial-card">
+        <span class="story-tag">Profiles</span>
+        <h4>Player pages got a premium pass</h4>
+        <p class="muted">Discovery blocks, spotlight cards, and stronger profile routes now feel like part of one system.</p>
+        <div class="editorial-meta"><span>This week</span><span>Players</span></div>
+      </article>
+    </div>
+
+    <article class="card newsroom-timeline top-gap-md">
+      <div class="section-head tight-head">
+        <div><div class="hero-kicker">Roadmap pulse</div><h3>What is moving right now</h3></div>
+      </div>
+      <div class="stack-list compact-gap">
+        <div class="list-row compact-list-row"><div class="row-main"><strong>News page redesign</strong><div class="muted">Editorial layout, feature story, categories, and richer article cards.</div></div><div class="row-side"><span class="pill">Done</span></div></div>
+        <div class="list-row compact-list-row"><div class="row-main"><strong>Tournament density pass</strong><div class="muted">Featured event hero, better empty states, and stronger weekly sections.</div></div><div class="row-side"><span class="pill">Done</span></div></div>
+        <div class="list-row compact-list-row"><div class="row-main"><strong>Home lower rebuild</strong><div class="muted">Live match cards, platform stats, and richer featured sections.</div></div><div class="row-side"><span class="pill">Done</span></div></div>
+      </div>
+    </article>
+  </div>
+
+  <aside class="sidebar-stack">
+    <article class="card side-highlight">
+      <div class="card-title">Categories</div>
+      <div class="leader-row compact-row"><span>Patch</span><strong>02</strong></div>
+      <div class="leader-row compact-row"><span>Events</span><strong>03</strong></div>
+      <div class="leader-row compact-row"><span>Guides</span><strong>01</strong></div>
+      <div class="leader-row compact-row"><span>Platform</span><strong>04</strong></div>
+    </article>
+    <article class="card side-highlight">
+      <div class="card-title">Quick Links</div>
+      <div class="stack-list compact-gap">
+        <a class="list-row compact-list-row card-link" href="{{ url_for('play') }}"><div class="row-main"><strong>Queue hub</strong><div class="muted">Check live modes and recent matches.</div></div></a>
+        <a class="list-row compact-list-row card-link" href="{{ url_for('tournaments') }}"><div class="row-main"><strong>Weekly page</strong><div class="muted">Open cups, featured event, and creation tools.</div></div></a>
+        <a class="list-row compact-list-row card-link" href="{{ url_for('players') }}"><div class="row-main"><strong>Players</strong><div class="muted">Scout profiles and compare active competitors.</div></div></a>
+      </div>
+    </article>
+  </aside>
+</section>
+{% endblock %}

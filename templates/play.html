@@ -1,0 +1,223 @@
+{% extends 'faceit_base.html' %}
+{% from '_faceit_macros.html' import empty_panel %}
+{% block title %}Aoe4IT Play{% endblock %}
+{% block content %}
+{% set total_played = current_stats.played if current_stats else 0 %}
+{% set win_rate = ((current_stats.wins / current_stats.played * 100) if current_stats and current_stats.played else 0)|round(1) %}
+<section class="hero hero-play compact hero-with-art" style="background-image:url('{{ url_for('static', filename='art/header_market.webp') }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-center center-narrow">
+    <div class="hero-kicker">Competitive matchmaking</div>
+    <h1>Play</h1>
+    <p>Queue into the full competitive flow: ready check, map draft, civ bans, hidden picks, secret snipes, then live match reporting.</p>
+  </div>
+</section>
+
+<section class="tab-strip">
+  <a class="subtab {% if active_tab == 'find' %}active{% endif %}" href="{{ url_for('play', tab='find') }}">Find Match</a>
+  <a class="subtab {% if active_tab == 'party' %}active{% endif %}" href="{{ url_for('play', tab='party') }}">Create Party</a>
+  <a class="subtab {% if active_tab == 'custom' %}active{% endif %}" href="{{ url_for('play', tab='custom') }}">Custom Game</a>
+</section>
+
+{% if active_tab == 'party' %}
+<section class="card active-room-banner surface-card--soft">
+  <div>
+    <div class="card-title">Party queue prep</div>
+    <p class="muted">Use the player directory to scout partners, then jump into practice or weekly cups together.</p>
+  </div>
+  <a class="small-btn" href="{{ url_for('players', tab='friends') if current_player else url_for('players') }}">Open player network</a>
+</section>
+{% elif active_tab == 'custom' %}
+<section class="card active-room-banner surface-card--soft">
+  <div>
+    <div class="card-title">Custom tools</div>
+    <p class="muted">Open weekly events, browse players, or enter the hidden draft lab for manual test rooms.</p>
+  </div>
+  {% if shadow_lab_available %}<a class="small-btn" href="{{ url_for('hidden_draft_lab') }}">Open draft lab</a>{% else %}<a class="small-btn alt" href="{{ url_for('tournaments') }}">Open weekly</a>{% endif %}
+</section>
+{% elif active_room %}
+<section class="card active-room-banner glow-orange surface-card--accent">
+  <div>
+    <div class="card-title">Active Room</div>
+    <p class="muted">{{ active_room.player1_name }} vs {{ active_room.player2_name }} • {{ active_room.status|replace('_',' ')|title }}</p>
+  </div>
+  <a class="small-btn" href="{{ url_for('practice_room_detail', room_id=active_room.id) }}">Open Room</a>
+</section>
+{% endif %}
+
+<section class="content-grid play-grid play-tier2-grid">
+  <article class="mode-card featured tier2-highlight">
+    <div class="mode-card-art orange-art" style="background-image:url('{{ url_for('static', filename='art/nav_games_age4.webp') }}'); background-size:cover; background-position:center;"></div>
+    <div class="mode-card-content">
+      <div class="card-kicker">Ranked focus</div>
+      <h3>Solo, 1v1</h3>
+      <p>{{ bo1_eta }}</p>
+      <div class="mode-mini-stats">
+        <span class="pill">{{ bo1_waiting|length }} waiting</span>
+        <span class="pill">{{ recent|length }} recent sets</span>
+      </div>
+      {% if current_player and queue_row and queue_row.queue_type == 'bo1' %}
+      <form method="post" action="{{ url_for('leave_queue') }}">{{ csrf_input() }}<button class="full-btn alt-fill" type="submit">Leave Queue</button></form>
+      {% elif current_player %}
+      <form method="post" action="{{ url_for('join_queue') }}">{{ csrf_input() }}<input type="hidden" name="queue_type" value="bo1"><button class="full-btn" type="submit">Queue Now</button></form>
+      {% elif current_user %}
+      <a class="full-btn btn-link" href="{{ url_for('players') }}">Create Player</a>
+      {% else %}
+      <a class="full-btn btn-link" href="{{ url_for('register_account') }}">Queue Now</a>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="mode-card tier2-compact">
+    <div class="mode-card-art steel-art" style="background-image:url('{{ url_for('static', filename='art/del_splash_mobile.webp') }}'); background-size:cover; background-position:center;"></div>
+    <div class="mode-card-content">
+      <div class="card-kicker">Practice flow</div>
+      <h3>Practice, BO3</h3>
+      <p>{{ bo3_eta }}</p>
+      {% if current_player and queue_row and queue_row.queue_type == 'bo3' %}
+      <form method="post" action="{{ url_for('leave_queue') }}">{{ csrf_input() }}<button class="small-btn alt" type="submit">Leave BO3</button></form>
+      {% elif current_player %}
+      <form method="post" action="{{ url_for('join_queue') }}">{{ csrf_input() }}<input type="hidden" name="queue_type" value="bo3"><button class="small-btn" type="submit">Join BO3</button></form>
+      {% elif current_user %}
+      <a class="small-btn" href="{{ url_for('players') }}">Create Player</a>
+      {% else %}
+      <a class="small-btn" href="{{ url_for('register_account') }}">Create Account</a>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="mode-card tier2-compact">
+    <div class="mode-card-art steel-art" style="background-image:url('{{ url_for('static', filename='art/bg_insider_signup.webp') }}'); background-size:cover; background-position:center;"></div>
+    <div class="mode-card-content">
+      <div class="card-kicker">Weekly events</div>
+      <h3>Weekly Cup</h3>
+      <p>{% if next_cup %}{{ next_cup.name }}{% else %}Next event soon{% endif %}</p>
+      <a class="small-btn" href="{{ url_for('tournaments') }}">Open Weekly</a>
+    </div>
+  </article>
+
+  <article class="mode-card tier2-compact">
+    <div class="mode-card-art steel-art" style="background-image:url('{{ url_for('static', filename='art/logo_age4_darkback.webp') }}'); background-size:cover; background-position:center;"></div>
+    <div class="mode-card-content">
+      <div class="card-kicker">Scouting</div>
+      <h3>Player Directory</h3>
+      <p>Scout opponents, civ choices, and ratings before you queue.</p>
+      <a class="small-btn alt" href="{{ url_for('players') }}">Browse</a>
+    </div>
+  </article>
+
+  <article class="card queue-command-center play-main-span glow-orange surface-card--accent">
+    <div class="section-head">
+      <div>
+        <div class="hero-kicker">Tier 2 upgrade</div>
+        <h3>Queue command center</h3>
+      </div>
+      <span class="pill">{{ active_tab|title }} mode</span>
+    </div>
+
+    <div class="command-center-grid top-gap">
+      <div class="command-identity card-inset">
+        <div class="party-header align-top">
+          <div class="profile-avatar big">{{ (current_player.display_name if current_player else 'A')[0]|upper }}</div>
+          <div>
+            <h3>{% if current_player %}{{ current_player.display_name }}{% else %}Account setup needed{% endif %}</h3>
+            <p class="muted">{% if current_player %}Main civ: {{ current_player.main_civ or 'Unset' }} • Rating {{ current_player.rating }}{% else %}Register and create your player to unlock queueing.{% endif %}</p>
+          </div>
+        </div>
+        <div class="command-stat-grid">
+          <div class="signal-card compact-signal"><span class="signal-label">Sets played</span><strong>{{ total_played }}</strong><div class="muted">tracked results</div></div>
+          <div class="signal-card compact-signal"><span class="signal-label">Win rate</span><strong>{{ win_rate }}%</strong><div class="muted">finished rooms only</div></div>
+          <div class="signal-card compact-signal"><span class="signal-label">BO1 lane</span><strong>{{ bo1_waiting|length }}</strong><div class="muted">players waiting</div></div>
+          <div class="signal-card compact-signal"><span class="signal-label">BO3 lane</span><strong>{{ bo3_waiting|length }}</strong><div class="muted">players waiting</div></div>
+        </div>
+      </div>
+
+      <div class="command-actions card-inset">
+        <div class="card-title">Quick actions</div>
+        <div class="command-action-stack top-gap">
+          {% if current_player %}
+          <form method="post" action="{{ url_for('join_queue') }}">{{ csrf_input() }}<input type="hidden" name="queue_type" value="bo1"><button class="full-btn" type="submit">Queue BO1</button></form>
+          <form method="post" action="{{ url_for('join_queue') }}">{{ csrf_input() }}<input type="hidden" name="queue_type" value="bo3"><button class="full-btn alt-fill" type="submit">Queue BO3</button></form>
+          {% elif current_user %}
+          <a class="full-btn btn-link" href="{{ url_for('players') }}">Create player</a>
+          <a class="full-btn btn-link alt-fill" href="{{ url_for('players') }}">Open profiles</a>
+          {% else %}
+          <a class="full-btn btn-link" href="{{ url_for('register_account') }}">Create account</a>
+          <a class="full-btn btn-link alt-fill" href="{{ url_for('login') }}">Log in</a>
+          {% endif %}
+          <a class="small-btn alt" href="{{ url_for('ladder') }}">Open ladder</a>
+        </div>
+      </div>
+
+      <div class="command-flow card-inset">
+        <div class="card-title">Match flow</div>
+        <div class="queue-flow-list top-gap">
+          <div class="queue-flow-step active"><span>1</span><div><strong>Queue</strong><div class="muted">Join BO1 or BO3 and wait for the next fit.</div></div></div>
+          <div class="queue-flow-step active"><span>2</span><div><strong>Room opens</strong><div class="muted">Ready check and room state go live.</div></div></div>
+          <div class="queue-flow-step"><span>3</span><div><strong>Draft phase</strong><div class="muted">Map draft, civ actions, and hidden prep.</div></div></div>
+          <div class="queue-flow-step"><span>4</span><div><strong>Result report</strong><div class="muted">Finalize the score and push it into ladder history.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="command-queue-lanes top-gap">
+      <div class="queue-lane">
+        <div class="lane-head"><strong>BO1 live lane</strong><span class="pill">{{ bo1_waiting|length }} waiting</span></div>
+        {% for row in bo1_waiting[:4] %}
+        <div class="queue-row-item"><strong>{{ row.display_name }}</strong><span>{{ row.rating }}</span><span>{{ row.main_civ or 'Unset' }}</span></div>
+        {% else %}
+        <div class="queue-empty">{{ empty_panel('BO1 lane is open', 'No one is holding the solo lane right now. The next player in can trigger an instant match.', url_for('play'), 'Refresh lane', url_for('players'), 'Browse players', compact=True) }}</div>
+        {% endfor %}
+      </div>
+      <div class="queue-lane">
+        <div class="lane-head"><strong>BO3 live lane</strong><span class="pill">{{ bo3_waiting|length }} waiting</span></div>
+        {% for row in bo3_waiting[:4] %}
+        <div class="queue-row-item"><strong>{{ row.display_name }}</strong><span>{{ row.rating }}</span><span>{{ row.main_civ or 'Unset' }}</span></div>
+        {% else %}
+        <div class="queue-empty">{{ empty_panel('BO3 lane is ready', 'Use this lane for longer practice sets, warmup series, and testing civ plans before the weekly cup.', url_for('play', tab='find'), 'Open queue', url_for('tournaments'), 'Weekly hub', compact=True) }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </article>
+
+  <article class="card teammates-card play-results-span enhanced-results-card surface-card--soft">
+    <div class="section-head">
+      <div>
+        <div class="hero-kicker">Activity</div>
+        <h3>Recent matches</h3>
+      </div>
+      <a class="small-btn alt" href="{{ url_for('ladder') }}">Open ladder</a>
+    </div>
+    <div class="recent-results-grid top-gap">
+      {% for row in recent[:6] %}
+      <div class="result-tile">
+        <div class="result-top"><strong>{{ row.player1_name }} vs {{ row.player2_name }}</strong><span class="pill">{{ row.context_name }}</span></div>
+        <div class="muted">{% if row.score1 is not none and row.score2 is not none %}{{ row.score1 }} - {{ row.score2 }}{% else %}Awaiting result{% endif %}</div>
+        {% if row.source_type == 'practice' %}
+        <a class="small-btn alt" href="{{ url_for('practice_room_detail', room_id=row.source_id) }}">Open</a>
+        {% else %}
+        <a class="small-btn alt" href="{{ url_for('match_detail', match_id=row.source_id) }}">Open</a>
+        {% endif %}
+      </div>
+      {% else %}
+      {{ empty_panel('No results in the feed yet', 'The moment a room is completed, this strip turns into a live archive of score cards, maps, and result routes.', url_for('play'), 'Open queue', url_for('ladder'), 'View ladder', compact=True) }}
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="card instant-card play-side-card surface-card--sidebar">
+    <div class="card-title">Instant challenge</div>
+    <div class="card-banner gold-banner tall" style="background-image:url('{{ url_for('static', filename='art/bg_insider_signup.webp') }}'); background-size:cover; background-position:center;"></div>
+    <p>{% if next_cup %}{{ next_cup.name }}{% else %}Weekly challenges rotate here{% endif %}</p>
+    <a class="full-btn btn-link" href="{{ url_for('tournaments') }}">Open Weekly</a>
+  </article>
+
+  <article class="card missions-side play-side-card surface-card--sidebar">
+    <div class="card-title">Daily missions</div>
+    <div class="mission-row"><div class="mission-dot"></div><span>Win 2 Matches in 1v1</span></div>
+    <div class="mission-row"><div class="mission-dot"></div><span>Gather 5,000 Resources</span></div>
+    <div class="mission-row"><div class="mission-dot"></div><span>Win a Game as Rus</span></div>
+    <a class="small-btn" href="{{ url_for('ladder', mode='season', view='rewards') }}">Open Rewards</a>
+  </article>
+</section>
+{% endblock %}

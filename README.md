@@ -20,7 +20,7 @@ Open `http://127.0.0.1:5055`
 ## Render
 
 This project includes `render.yaml`.
-The default free staging blueprint stores its SQLite database at `/tmp/aoe4it/aoe4it.db` so the app boots cleanly on Render free. For persistent SQLite storage, upgrade the service and point `DATABASE_PATH` or `RENDER_DISK_PATH` to a mounted disk path such as `/var/data`.
+The app stores its SQLite database on the mounted Render disk at `/var/data/aoe4it.db`.
 
 Recommended environment variables:
 - `APP_BASE_URL`
